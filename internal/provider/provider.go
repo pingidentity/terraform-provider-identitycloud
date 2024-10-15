@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -11,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	client "github.com/pingidentity/identitycloud-go-client/identitycloud"
 	internaltypes "github.com/pingidentity/terraform-provider-identitycloud/internal/types"
+	"github.com/pingidentity/terraform-provider-identitycloud/internal/utils"
 )
 
 // Ensure the implementation satisfies the expected interfacesß
@@ -53,6 +56,14 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 	clientConfig := client.NewConfiguration()
 	httpClient := &http.Client{}
 	clientConfig.HTTPClient = httpClient
+	userAgentSuffix := fmt.Sprintf("terraform-provider-identitycloud/%s", p.version)
+	// The extra suffix for the user-agent is optional and is not considered a provider parameter.
+	// We just use it directly from the environment variable, if set.
+	userAgentExtraSuffix := os.Getenv("PINGAIC_TF_APPEND_USER_AGENT")
+	if userAgentExtraSuffix != "" {
+		userAgentSuffix += fmt.Sprintf(" %s", userAgentExtraSuffix)
+	}
+	clientConfig.UserAgentSuffix = utils.Pointer(userAgentSuffix)
 	resourceConfig.ApiClient = client.NewAPIClient(clientConfig)
 	resp.ResourceData = resourceConfig
 	resp.DataSourceData = resourceConfig
