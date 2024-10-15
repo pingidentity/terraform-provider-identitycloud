@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/pingidentity/terraform-provider-aic/internal/provider"
+	"github.com/pingidentity/terraform-provider-identitycloud/internal/provider"
 )
 
 // Run "go generate" to format example terraform files and generate the provider docs
@@ -32,8 +32,7 @@ func main() {
 	flag.Parse()
 
 	err := providerserver.Serve(context.Background(), provider.NewFactory(version), providerserver.ServeOpts{
-		//TODO provider name
-		Address: "registry.terraform.io/pingidentity/aic",
+		Address: "registry.terraform.io/pingidentity/identitycloud",
 		Debug:   debug,
 	})
 

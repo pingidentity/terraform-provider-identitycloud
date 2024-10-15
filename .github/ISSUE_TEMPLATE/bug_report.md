@@ -19,7 +19,7 @@ assignees: ''
 
 Thank you for opening an issue. Please note that we try to keep the Terraform issue tracker reserved for bug reports and feature requests. For general usage questions, please see: https://www.terraform.io/community.html.
 
-### AIC Terraform provider Version
+### PingOne Advanced Identity Cloud Terraform provider Version
 Check the version you have configured in your .tf files. If you are not running the latest version of the provider, please upgrade because your issue may have already been fixed.
 
 ### Terraform Version

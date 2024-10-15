@@ -9,19 +9,19 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	client "github.com/pingidentity/aic-temp-go-client/aic"
-	internaltypes "github.com/pingidentity/terraform-provider-aic/internal/types"
+	client "github.com/pingidentity/identitycloud-go-client/identitycloud"
+	internaltypes "github.com/pingidentity/terraform-provider-identitycloud/internal/types"
 )
 
 // Ensure the implementation satisfies the expected interfacesß
 var (
-	_ provider.Provider = &aicProvider{}
+	_ provider.Provider = &identityCloudProvider{}
 )
 
 // New is a helper function to simplify provider server and testing implementation.
 func NewFactory(version string) func() provider.Provider {
 	return func() provider.Provider {
-		return &aicProvider{
+		return &identityCloudProvider{
 			version: version,
 		}
 	}
@@ -32,24 +32,23 @@ func NewTestProvider() provider.Provider {
 	return NewFactory("test")()
 }
 
-// aicProvider is the provider implementation.
-type aicProvider struct {
+// identityCloudProvider is the provider implementation.
+type identityCloudProvider struct {
 	version string
 }
 
 // Metadata returns the provider type name.
-func (p *aicProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
-	//TODO update name
-	resp.TypeName = "aic"
+func (p *identityCloudProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "identitycloud"
 }
 
 // GetSchema defines the provider-level schema for configuration data.
 // Schema defines the provider-level schema for configuration data.
-func (p *aicProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
+func (p *identityCloudProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{}
 }
 
-func (p *aicProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+func (p *identityCloudProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	var resourceConfig internaltypes.ResourceConfiguration
 	clientConfig := client.NewConfiguration()
 	httpClient := &http.Client{}
@@ -57,15 +56,15 @@ func (p *aicProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	resourceConfig.ApiClient = client.NewAPIClient(clientConfig)
 	resp.ResourceData = resourceConfig
 	resp.DataSourceData = resourceConfig
-	tflog.Info(ctx, "Configured AIC client", map[string]interface{}{"success": true})
+	tflog.Info(ctx, "Configured identity cloud client", map[string]interface{}{"success": true})
 }
 
 // DataSources defines the data sources implemented in the provider.
-func (p *aicProvider) DataSources(_ context.Context) []func() datasource.DataSource {
+func (p *identityCloudProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{}
 }
 
 // Resources defines the resources implemented in the provider.
-func (p *aicProvider) Resources(_ context.Context) []func() resource.Resource {
+func (p *identityCloudProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{}
 }

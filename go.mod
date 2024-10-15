@@ -1,4 +1,4 @@
-module github.com/pingidentity/terraform-provider-aic
+module github.com/pingidentity/terraform-provider-identitycloud
 
 go 1.22.2
 
@@ -12,11 +12,11 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/katbyte/terrafmt v0.5.3
 	github.com/pavius/impi v0.0.3
-	github.com/pingidentity/aic-temp-go-client v0.1.0
+	github.com/pingidentity/identitycloud-go-client v0.1.0
 	github.com/terraform-linters/tflint v0.51.1
 )
 
-replace github.com/pingidentity/aic-temp-go-client v0.1.0 => ../aic-temp-go-client
+replace github.com/pingidentity/identitycloud-go-client v0.1.0 => ../identitycloud-go-client
 
 require (
 	4d63.com/gocheckcompilerdirectives v1.2.1 // indirect
