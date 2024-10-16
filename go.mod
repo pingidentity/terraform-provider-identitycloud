@@ -16,8 +16,6 @@ require (
 	github.com/terraform-linters/tflint v0.51.1
 )
 
-replace github.com/pingidentity/identitycloud-go-client v0.1.0 => ../identitycloud-go-client
-
 require (
 	4d63.com/gocheckcompilerdirectives v1.2.1 // indirect
 	4d63.com/gochecknoglobals v0.2.1 // indirect
