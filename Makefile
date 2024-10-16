@@ -20,7 +20,7 @@ vet:
 	go vet ./...
 
 testacc:
-	TF_ACC=1 go test ./internal/acctest/config/... -timeout 10m -v -count=1
+	TF_ACC=1 go test ./internal/... -timeout 10m -v -count=1
 
 devcheck: install golangcilint generate tfproviderlint tflint terrafmtlint importfmtlint testacc
 

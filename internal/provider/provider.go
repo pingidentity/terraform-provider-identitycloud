@@ -90,9 +90,11 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 
 	if envFqdn == "" {
 		resp.Diagnostics.AddAttributeError(path.Root("tenant_environment_fqdn"), providererror.InvalidProviderConfiguration, "tenant_environment_fqdn provider attribute is required. If not set in the provider configuration, it can be set with the `PINGAIC_TF_TENANT_ENV_FQDN` environment variable.")
-	} else {
-		//TODO validate the FQDN
 	}
+	// else {
+	// TODO validate the FQDN
+	// }
+
 	// User must provide an access token to the provider
 	var accessToken string
 	if !config.AccessToken.IsUnknown() && !config.AccessToken.IsNull() {
