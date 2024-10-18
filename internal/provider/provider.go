@@ -108,10 +108,14 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 	}
 
 	resourceConfig := internaltypes.ResourceConfiguration{
-		TenantEnvironmentFqdn: envFqdn,
-		AccessToken:           accessToken,
+		AccessToken: accessToken,
 	}
 	clientConfig := client.NewConfiguration()
+	clientConfig.Servers = client.ServerConfigurations{
+		{
+			URL: fmt.Sprintf("https://%s", envFqdn),
+		},
+	}
 	httpClient := &http.Client{}
 	clientConfig.HTTPClient = httpClient
 	userAgentSuffix := fmt.Sprintf("terraform-provider-identitycloud/%s", p.version)
