@@ -22,12 +22,12 @@ import (
 
 const variableVariableId = "esv-variable1234"
 
-var testServerUrl = ""
+var testServerUrl *string
 
 func TestAccVariable_RemovalDrift(t *testing.T) {
 	if strings.ToLower(os.Getenv("PINGAIC_TF_TEST_MOCK_SERVICE")) == "true" {
 		testServer := mockVariableHttpServer()
-		testServerUrl = testServer.URL
+		testServerUrl = utils.Pointer(testServer.URL)
 		os.Setenv("PINGAIC_TF_TEST_OVERRIDE_URL", testServer.URL)
 		defer testServer.Close()
 	}
@@ -57,7 +57,7 @@ func TestAccVariable_RemovalDrift(t *testing.T) {
 func TestAccVariable_MinimalMaximal(t *testing.T) {
 	if strings.ToLower(os.Getenv("PINGAIC_TF_TEST_MOCK_SERVICE")) == "true" {
 		testServer := mockVariableHttpServer()
-		testServerUrl = testServer.URL
+		testServerUrl = utils.Pointer(testServer.URL)
 		os.Setenv("PINGAIC_TF_TEST_OVERRIDE_URL", testServer.URL)
 		defer testServer.Close()
 	}
@@ -154,7 +154,7 @@ func variable_CheckComputedValuesComplete() resource.TestCheckFunc {
 
 // Delete the resource
 func variable_Delete(t *testing.T) {
-	testClient := acctest.Client(utils.Pointer(testServerUrl))
+	testClient := acctest.Client(testServerUrl)
 	_, _, err := testClient.VariablesAPI.DeleteVariable(acctest.AuthContext(), variableVariableId).Execute()
 	if err != nil {
 		t.Fatalf("Failed to delete config: %v", err)
@@ -163,7 +163,7 @@ func variable_Delete(t *testing.T) {
 
 // Test that any objects created by the test are destroyed
 func variable_CheckDestroy(s *terraform.State) error {
-	testClient := acctest.Client(utils.Pointer(testServerUrl))
+	testClient := acctest.Client(testServerUrl)
 	_, _, err := testClient.VariablesAPI.DeleteVariable(acctest.AuthContext(), variableVariableId).Execute()
 	if err == nil {
 		return fmt.Errorf("variable still exists after tests. Expected it to be destroyed")
@@ -202,7 +202,6 @@ func mockVariableHttpServer() *httptest.Server {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			varId := strings.Split(r.URL.String(), "/")[3]
 			inputVar.Id = varId
 			inputVar.LastChangeDate = "2024-01-01T00:00:00Z"
 			inputVar.LastChangedBy = "user"
@@ -210,7 +209,6 @@ func mockVariableHttpServer() *httptest.Server {
 			testVars[varId] = inputVar
 			out, _ = json.Marshal(inputVar)
 		case http.MethodDelete:
-			varId := strings.Split(r.URL.String(), "/")[3]
 			storedVar, ok := testVars[varId]
 			if !ok {
 				http.Error(w, "variable not found", http.StatusNotFound)
