@@ -129,7 +129,7 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 	}
 	clientConfig := client.NewConfiguration()
 	url := fmt.Sprintf("https://%s", envFqdn)
-	if testOverrideUrl != "" {
+	if testOverrideUrl != "" && p.version == "test" {
 		url = testOverrideUrl
 	}
 	clientConfig.Servers = client.ServerConfigurations{
@@ -138,7 +138,7 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 		},
 	}
 	httpClient := &http.Client{}
-	if testOverrideUrl != "" {
+	if testOverrideUrl != "" && p.version == "test" {
 		// This will only be used for tests that mock the service. The test override URL and the provider test version are verified above.
 		// #nosec G402
 		tr := &http.Transport{
