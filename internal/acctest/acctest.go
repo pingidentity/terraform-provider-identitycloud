@@ -46,6 +46,8 @@ func Client(testServerUrl *string) *client.APIClient {
 	}
 	clientConfig.HTTPClient = &http.Client{}
 	if testServerUrl != nil {
+		// This will only be used for acceptance tests that mock the service.
+		// #nosec G402
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,

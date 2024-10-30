@@ -136,7 +136,8 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 	}
 	httpClient := &http.Client{}
 	if testOverrideUrl != "" {
-		// This will only be used for tests that mock the service
+		// This will only be used for tests that mock the service. The test override URL is verified above.
+		// #nosec G402
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,

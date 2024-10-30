@@ -67,11 +67,12 @@ type variableResourceModel struct {
 
 func (r *variableResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Resource to create and manage a variable.",
+		Description: "Resource to create and manage a variable. Variables are used to set configuration values that need to be different for each tenant environment. They should not contain secrets.",
 		Attributes: map[string]schema.Attribute{
 			"description": schema.StringAttribute{
-				Optional: true,
-				Computed: true,
+				Description: "Description of the variable.",
+				Optional:    true,
+				Computed:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtMost(1000),
 				},
@@ -80,7 +81,7 @@ func (r *variableResource) Schema(ctx context.Context, req resource.SchemaReques
 			"expression_type": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "Supported values are `string`, `list`, `array`, `object`, `bool`, `int`, `number`, `base64encodedinlined`, `keyvaluelist`.",
+				Description: "The type of variable expression. Supported values are `string`, `list`, `array`, `object`, `bool`, `int`, `number`, `base64encodedinlined`, `keyvaluelist`.",
 				Validators: []validator.String{
 					stringvalidator.OneOf(
 						"string",
@@ -96,19 +97,24 @@ func (r *variableResource) Schema(ctx context.Context, req resource.SchemaReques
 				},
 			},
 			"id": schema.StringAttribute{
-				Computed: true,
+				Description: "ID of the variable.",
+				Computed:    true,
 			},
 			"last_change_date": schema.StringAttribute{
-				Computed: true,
+				Description: "Date the variable was last changed.",
+				Computed:    true,
 			},
 			"last_changed_by": schema.StringAttribute{
-				Computed: true,
+				Description: "User who last changed the variable.",
+				Computed:    true,
 			},
 			"loaded": schema.BoolAttribute{
-				Computed: true,
+				Description: "Indicates if the variable is loaded.",
+				Computed:    true,
 			},
 			"value_base64": schema.StringAttribute{
-				Required: true,
+				Description: "Base64 encoded value of the variable.",
+				Required:    true,
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(regexp.MustCompile("^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"), ""),
 				},
