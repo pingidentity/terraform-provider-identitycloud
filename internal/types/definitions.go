@@ -4,7 +4,6 @@ import client "github.com/pingidentity/identitycloud-go-client/identitycloud"
 
 // Configuration passed to resources
 type ResourceConfiguration struct {
-	ApiClient             *client.APIClient
-	TenantEnvironmentFqdn string
-	AccessToken           string
+	ApiClient   *client.APIClient
+	AccessToken string
 }

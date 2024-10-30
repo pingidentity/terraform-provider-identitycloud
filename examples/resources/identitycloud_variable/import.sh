@@ -1,0 +1,1 @@
+terraform import identitycloud_variable.example variable_id
