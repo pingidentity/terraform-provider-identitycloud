@@ -6,7 +6,7 @@ on:
     - cron: "0 7 * * *"
 
 jobs:
-  acceptance:
+  acceptancemockservice:
     name: Acceptance Tests
     runs-on: ubuntu-20.04
     strategy:
@@ -27,7 +27,33 @@ jobs:
         with:
           terraform_version: ${{ matrix.terraform }}
           terraform_wrapper: false
-      - run: make testacc
+      - run: make testaccmockservice
         env:
           TF_ACC: "1"
           CONFIG: ${{ secrets.Config }}
+  # Uncomment to enable acceptance tests on the real service 
+  # acceptance:
+  #   name: Acceptance Tests
+  #   runs-on: ubuntu-20.04
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       terraform:
+  #         - "1.4.*"
+  #         - "1.5.*"
+  #         - "1.6.*"
+  #     max-parallel: 1
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-go@v5
+  #       with:
+  #         go-version-file: "go.mod"
+  #         cache: true
+  #     - uses: hashicorp/setup-terraform@v3
+  #       with:
+  #         terraform_version: ${{ matrix.terraform }}
+  #         terraform_wrapper: false
+  #     - run: make testacc
+  #       env:
+  #         TF_ACC: "1"
+  #         CONFIG: ${{ secrets.Config }}

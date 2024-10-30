@@ -25,10 +25,12 @@ const variableVariableId = "esv-variable1234"
 var testServerUrl = ""
 
 func TestAccVariable_RemovalDrift(t *testing.T) {
-	testServer := mockVariableHttpServer()
-	testServerUrl = testServer.URL
-	os.Setenv("PINGAIC_TF_TEST_OVERRIDE_URL", testServer.URL)
-	defer testServer.Close()
+	if strings.ToLower(os.Getenv("PINGAIC_TF_TEST_MOCK_SERVICE")) == "true" {
+		testServer := mockVariableHttpServer()
+		testServerUrl = testServer.URL
+		os.Setenv("PINGAIC_TF_TEST_OVERRIDE_URL", testServer.URL)
+		defer testServer.Close()
+	}
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -53,10 +55,12 @@ func TestAccVariable_RemovalDrift(t *testing.T) {
 }
 
 func TestAccVariable_MinimalMaximal(t *testing.T) {
-	testServer := mockVariableHttpServer()
-	testServerUrl = testServer.URL
-	os.Setenv("PINGAIC_TF_TEST_OVERRIDE_URL", testServer.URL)
-	defer testServer.Close()
+	if strings.ToLower(os.Getenv("PINGAIC_TF_TEST_MOCK_SERVICE")) == "true" {
+		testServer := mockVariableHttpServer()
+		testServerUrl = testServer.URL
+		os.Setenv("PINGAIC_TF_TEST_OVERRIDE_URL", testServer.URL)
+		defer testServer.Close()
+	}
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){

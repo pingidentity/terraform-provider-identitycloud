@@ -17,16 +17,24 @@ var testOverrideUrlRegex = regexp.MustCompile(`^https://127.0.0.1:\d{5}$`)
 
 // Verify that any required environment variables are set before the test begins
 func ConfigurationPreCheck(t *testing.T) {
-	envVars := []string{
-		"PINGAIC_TF_TENANT_ENV_FQDN",
-		"PINGAIC_TF_ACCESS_TOKEN",
-	}
-
 	errorFound := false
-	for _, envVar := range envVars {
-		if os.Getenv(envVar) == "" {
-			t.Errorf("The '%s' environment variable must be set to run acceptance tests", envVar)
+	if os.Getenv("PINGAIC_TF_TEST_MOCK_SERVICE") == "true" {
+		if os.Getenv("PINGAIC_TF_TENANT_ENV_FQDN") != "" {
+			t.Errorf("The 'PINGAIC_TF_TENANT_ENV_FQDN' environment variable must not be set when running acceptance tests with the mock service via setting `PINGAIC_TF_TEST_MOCK_SERIVCE` to true")
 			errorFound = true
+		} else {
+			os.Setenv("PINGAIC_TF_ACCESS_TOKEN", "placeholder")
+		}
+	} else {
+		envVars := []string{
+			"PINGAIC_TF_TENANT_ENV_FQDN",
+			"PINGAIC_TF_ACCESS_TOKEN",
+		}
+		for _, envVar := range envVars {
+			if os.Getenv(envVar) == "" {
+				t.Errorf("The '%s' environment variable must be set to run acceptance tests", envVar)
+				errorFound = true
+			}
 		}
 	}
 
