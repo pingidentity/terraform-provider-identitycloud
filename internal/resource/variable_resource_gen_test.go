@@ -185,19 +185,16 @@ var testVars = map[string]variable{}
 
 func mockVariableHttpServer() *httptest.Server {
 	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var out []byte
+		varId := strings.Split(r.URL.String(), "/")[3]
 		switch r.Method {
 		case http.MethodGet:
-			varId := strings.Split(r.URL.String(), "/")[3]
 			storedVar, ok := testVars[varId]
 			if !ok {
 				http.Error(w, "variable not found", http.StatusNotFound)
 				return
 			}
-			out, _ := json.Marshal(storedVar)
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Content-API-Version", "1.0")
-			w.WriteHeader(http.StatusOK)
-			w.Write(out)
+			out, _ = json.Marshal(storedVar)
 		case http.MethodPut:
 			var inputVar variable
 			err := json.NewDecoder(r.Body).Decode(&inputVar)
@@ -211,11 +208,7 @@ func mockVariableHttpServer() *httptest.Server {
 			inputVar.LastChangedBy = "user"
 			inputVar.Loaded = true
 			testVars[varId] = inputVar
-			out, _ := json.Marshal(inputVar)
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Content-API-Version", "1.0")
-			w.WriteHeader(http.StatusOK)
-			w.Write(out)
+			out, _ = json.Marshal(inputVar)
 		case http.MethodDelete:
 			varId := strings.Split(r.URL.String(), "/")[3]
 			storedVar, ok := testVars[varId]
@@ -224,11 +217,11 @@ func mockVariableHttpServer() *httptest.Server {
 				return
 			}
 			delete(testVars, varId)
-			out, _ := json.Marshal(storedVar)
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Content-API-Version", "1.0")
-			w.WriteHeader(http.StatusOK)
-			w.Write(out)
+			out, _ = json.Marshal(storedVar)
 		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-API-Version", "1.0")
+		w.WriteHeader(http.StatusOK)
+		w.Write(out)
 	}))
 }
