@@ -172,5 +172,6 @@ func (p *identityCloudProvider) DataSources(_ context.Context) []func() datasour
 func (p *identityCloudProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		aicresource.VariableResource,
+		aicresource.CustomDomainsResource,
 	}
 }
