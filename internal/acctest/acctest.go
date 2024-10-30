@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 	"testing"
 
 	client "github.com/pingidentity/identitycloud-go-client/identitycloud"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/auth"
 )
+
+var testOverrideUrlRegex = regexp.MustCompile(`^https://127.0.0.1:\d{5}$`)
 
 // Verify that any required environment variables are set before the test begins
 func ConfigurationPreCheck(t *testing.T) {
@@ -33,10 +36,10 @@ func ConfigurationPreCheck(t *testing.T) {
 }
 
 // Client to be used directly in tests
-func Client(testServerUrl *string) *client.APIClient {
+func Client(testOverrideUrl *string) *client.APIClient {
 	clientUrl := fmt.Sprintf("https://%s", os.Getenv("PINGAIC_TF_TENANT_ENV_FQDN"))
-	if testServerUrl != nil {
-		clientUrl = *testServerUrl
+	if testOverrideUrl != nil && testOverrideUrlRegex.MatchString(*testOverrideUrl) {
+		clientUrl = *testOverrideUrl
 	}
 	clientConfig := client.NewConfiguration()
 	clientConfig.Servers = client.ServerConfigurations{
@@ -45,8 +48,8 @@ func Client(testServerUrl *string) *client.APIClient {
 		},
 	}
 	clientConfig.HTTPClient = &http.Client{}
-	if testServerUrl != nil {
-		// This will only be used for acceptance tests that mock the service.
+	if testOverrideUrl != nil {
+		// This will only be used for acceptance tests that mock the service. The override URL is verified above.
 		// #nosec G402
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{
