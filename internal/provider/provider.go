@@ -94,12 +94,15 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 	}
 
 	// Tests can override the URL
-	testOverrideUrl := os.Getenv("PINGAIC_TF_TEST_OVERRIDE_URL")
-	// Ensure the override URL matches the expected localhost format
-	if testOverrideUrl != "" && !testOverrideUrlRegex.MatchString(testOverrideUrl) {
-		resp.Diagnostics.AddError(providererror.InvalidProviderConfiguration,
-			fmt.Sprintf("Invalid test override URL %s. If you do not intend to override the URL for testing, ensure the `PINGAIC_TF_TEST_OVERRIDE_URL` environment variable is not set.", testOverrideUrl))
-		return
+	var testOverrideUrl string
+	if p.version == "test" {
+		testOverrideUrl = os.Getenv("PINGAIC_TF_TEST_OVERRIDE_URL")
+		// Ensure the override URL matches the expected localhost format
+		if testOverrideUrl != "" && !testOverrideUrlRegex.MatchString(testOverrideUrl) {
+			resp.Diagnostics.AddError(providererror.InvalidProviderConfiguration,
+				fmt.Sprintf("Invalid test override URL %s. If you do not intend to override the URL for testing, ensure the `PINGAIC_TF_TEST_OVERRIDE_URL` environment variable is not set.", testOverrideUrl))
+			return
+		}
 	}
 
 	if envFqdn == "" && testOverrideUrl == "" {
@@ -136,7 +139,7 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 	}
 	httpClient := &http.Client{}
 	if testOverrideUrl != "" {
-		// This will only be used for tests that mock the service. The test override URL is verified above.
+		// This will only be used for tests that mock the service. The test override URL and the provider test version are verified above.
 		// #nosec G402
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{
