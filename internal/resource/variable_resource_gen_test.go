@@ -3,7 +3,12 @@
 package resource_test
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
@@ -12,11 +17,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/acctest"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/provider"
+	"github.com/pingidentity/terraform-provider-identitycloud/internal/utils"
 )
 
-const variableVariableId = "variableVariableId"
+const variableVariableId = "esv-variable1234"
+
+var testServerUrl = ""
 
 func TestAccVariable_RemovalDrift(t *testing.T) {
+	testServer := mockVariableHttpServer()
+	testServerUrl = testServer.URL
+	os.Setenv("PINGAIC_TF_TEST_OVERRIDE_URL", testServer.URL)
+	defer testServer.Close()
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -41,6 +53,10 @@ func TestAccVariable_RemovalDrift(t *testing.T) {
 }
 
 func TestAccVariable_MinimalMaximal(t *testing.T) {
+	testServer := mockVariableHttpServer()
+	testServerUrl = testServer.URL
+	os.Setenv("PINGAIC_TF_TEST_OVERRIDE_URL", testServer.URL)
+	defer testServer.Close()
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -91,8 +107,7 @@ func variable_MinimalHCL() string {
 	return fmt.Sprintf(`
 resource "identitycloud_variable" "example" {
   variable_id = "%s"
-  // TODO set values for minimal fields
-  value_base64 = //TODO
+  value_base64 = "aGVsbG8="
 }
 `, variableVariableId)
 }
@@ -102,46 +117,40 @@ func variable_CompleteHCL() string {
 	return fmt.Sprintf(`
 resource "identitycloud_variable" "example" {
   variable_id = "%s"
-  // TODO set values for complete fields
-  description = //TODO
-  expression_type = //TODO
-  value_base64 = //TODO
+  description = "My variable"
+  expression_type = "string"
+  value_base64 = "ZHVza3VsbA=="
 }
 `, variableVariableId)
 }
 
 // Validate any computed values when applying minimal HCL
-// TODO remove any values that are not computed from this check
-// TODO set expected values
+// TODO update when testing with real service
 func variable_CheckComputedValuesMinimal() resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
-		resource.TestCheckResourceAttr("identitycloud_variable.example", "description", "expected_value"),
-		resource.TestCheckResourceAttr("identitycloud_variable.example", "expression_type", "expected_value"),
-		resource.TestCheckResourceAttr("identitycloud_variable.example", "id", "expected_value"),
-		resource.TestCheckResourceAttr("identitycloud_variable.example", "last_change_date", "expected_value"),
-		resource.TestCheckResourceAttr("identitycloud_variable.example", "last_changed_by", "expected_value"),
-		resource.TestCheckResourceAttr("identitycloud_variable.example", "loaded", "expected_value"),
+		resource.TestCheckResourceAttr("identitycloud_variable.example", "description", ""),
+		resource.TestCheckResourceAttr("identitycloud_variable.example", "expression_type", ""),
+		resource.TestCheckResourceAttr("identitycloud_variable.example", "id", variableVariableId),
+		resource.TestCheckResourceAttrSet("identitycloud_variable.example", "last_change_date"),
+		resource.TestCheckResourceAttr("identitycloud_variable.example", "last_changed_by", "user"),
+		resource.TestCheckResourceAttr("identitycloud_variable.example", "loaded", "true"),
 	)
 }
 
 // Validate any computed values when applying complete HCL
-// TODO This may not be needed as a separate function from minimal HCL if the expected values match
-// TODO remove any values that are not computed from this check
-// TODO set expected values
+// TODO update when testing with real service
 func variable_CheckComputedValuesComplete() resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
-		resource.TestCheckResourceAttr("identitycloud_variable.example", "description", "expected_value"),
-		resource.TestCheckResourceAttr("identitycloud_variable.example", "expression_type", "expected_value"),
-		resource.TestCheckResourceAttr("identitycloud_variable.example", "id", "expected_value"),
-		resource.TestCheckResourceAttr("identitycloud_variable.example", "last_change_date", "expected_value"),
-		resource.TestCheckResourceAttr("identitycloud_variable.example", "last_changed_by", "expected_value"),
-		resource.TestCheckResourceAttr("identitycloud_variable.example", "loaded", "expected_value"),
+		resource.TestCheckResourceAttr("identitycloud_variable.example", "id", variableVariableId),
+		resource.TestCheckResourceAttrSet("identitycloud_variable.example", "last_change_date"),
+		resource.TestCheckResourceAttr("identitycloud_variable.example", "last_changed_by", "user"),
+		resource.TestCheckResourceAttr("identitycloud_variable.example", "loaded", "true"),
 	)
 }
 
 // Delete the resource
 func variable_Delete(t *testing.T) {
-	testClient := acctest.Client()
+	testClient := acctest.Client(utils.Pointer(testServerUrl))
 	_, _, err := testClient.VariablesAPI.DeleteVariable(acctest.AuthContext(), variableVariableId).Execute()
 	if err != nil {
 		t.Fatalf("Failed to delete config: %v", err)
@@ -150,10 +159,72 @@ func variable_Delete(t *testing.T) {
 
 // Test that any objects created by the test are destroyed
 func variable_CheckDestroy(s *terraform.State) error {
-	testClient := acctest.Client()
+	testClient := acctest.Client(utils.Pointer(testServerUrl))
 	_, _, err := testClient.VariablesAPI.DeleteVariable(acctest.AuthContext(), variableVariableId).Execute()
 	if err == nil {
 		return fmt.Errorf("variable still exists after tests. Expected it to be destroyed")
 	}
 	return nil
+}
+
+type variable struct {
+	Description    string `json:"description"`
+	ExpressionType string `json:"expressionType"`
+	Id             string `json:"_id"`
+	LastChangeDate string `json:"lastChangeDate"`
+	LastChangedBy  string `json:"lastChangedBy"`
+	Loaded         bool   `json:"loaded"`
+	ValueBase64    string `json:"valueBase64"`
+}
+
+var testVars = map[string]variable{}
+
+func mockVariableHttpServer() *httptest.Server {
+	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			varId := strings.Split(r.URL.String(), "/")[3]
+			storedVar, ok := testVars[varId]
+			if !ok {
+				http.Error(w, "variable not found", http.StatusNotFound)
+				return
+			}
+			out, _ := json.Marshal(storedVar)
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Content-API-Version", "1.0")
+			w.WriteHeader(http.StatusOK)
+			w.Write(out)
+		case http.MethodPut:
+			var inputVar variable
+			err := json.NewDecoder(r.Body).Decode(&inputVar)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			varId := strings.Split(r.URL.String(), "/")[3]
+			inputVar.Id = varId
+			inputVar.LastChangeDate = "2024-01-01T00:00:00Z"
+			inputVar.LastChangedBy = "user"
+			inputVar.Loaded = true
+			testVars[varId] = inputVar
+			out, _ := json.Marshal(inputVar)
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Content-API-Version", "1.0")
+			w.WriteHeader(http.StatusOK)
+			w.Write(out)
+		case http.MethodDelete:
+			varId := strings.Split(r.URL.String(), "/")[3]
+			storedVar, ok := testVars[varId]
+			if !ok {
+				http.Error(w, "variable not found", http.StatusNotFound)
+				return
+			}
+			delete(testVars, varId)
+			out, _ := json.Marshal(storedVar)
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Content-API-Version", "1.0")
+			w.WriteHeader(http.StatusOK)
+			w.Write(out)
+		}
+	}))
 }

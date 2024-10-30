@@ -2,9 +2,11 @@ package provider
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -15,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	client "github.com/pingidentity/identitycloud-go-client/identitycloud"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/providererror"
+	aicresource "github.com/pingidentity/terraform-provider-identitycloud/internal/resource"
 	internaltypes "github.com/pingidentity/terraform-provider-identitycloud/internal/types"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/utils"
 )
@@ -22,6 +25,8 @@ import (
 // Ensure the implementation satisfies the expected interfacesß
 var (
 	_ provider.Provider = &identityCloudProvider{}
+
+	testOverrideUrlRegex = regexp.MustCompile(`^https://127.0.0.1:\d{5}$`)
 )
 
 // New is a helper function to simplify provider server and testing implementation.
@@ -95,6 +100,15 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 	// TODO validate the FQDN
 	// }
 
+	// Tests can override the URL
+	testOverrideUrl := os.Getenv("PINGAIC_TF_TEST_OVERRIDE_URL")
+	// Ensure the override URL matches the expected localhost format
+	if testOverrideUrl != "" && !testOverrideUrlRegex.MatchString(testOverrideUrl) {
+		resp.Diagnostics.AddError(providererror.InvalidProviderConfiguration,
+			fmt.Sprintf("Invalid test override URL %s. If you do not intend to override the URL for testing, ensure the `PINGAIC_TF_TEST_OVERRIDE_URL` environment variable is not set.", testOverrideUrl))
+		return
+	}
+
 	// User must provide an access token to the provider
 	var accessToken string
 	if !config.AccessToken.IsUnknown() && !config.AccessToken.IsNull() {
@@ -111,12 +125,25 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 		AccessToken: accessToken,
 	}
 	clientConfig := client.NewConfiguration()
+	url := fmt.Sprintf("https://%s", envFqdn)
+	if testOverrideUrl != "" {
+		url = testOverrideUrl
+	}
 	clientConfig.Servers = client.ServerConfigurations{
 		{
-			URL: fmt.Sprintf("https://%s", envFqdn),
+			URL: url,
 		},
 	}
 	httpClient := &http.Client{}
+	if testOverrideUrl != "" {
+		// This will only be used for tests that mock the service
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+		httpClient.Transport = tr
+	}
 	clientConfig.HTTPClient = httpClient
 	userAgentSuffix := fmt.Sprintf("terraform-provider-identitycloud/%s", p.version)
 	// The extra suffix for the user-agent is optional and is not considered a provider parameter.
@@ -139,5 +166,7 @@ func (p *identityCloudProvider) DataSources(_ context.Context) []func() datasour
 
 // Resources defines the resources implemented in the provider.
 func (p *identityCloudProvider) Resources(_ context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	return []func() resource.Resource{
+		aicresource.VariableResource,
+	}
 }

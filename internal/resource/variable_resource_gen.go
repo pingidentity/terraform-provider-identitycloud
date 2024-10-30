@@ -18,6 +18,7 @@ import (
 	client "github.com/pingidentity/identitycloud-go-client/identitycloud"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/auth"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/providererror"
+	internaltypes "github.com/pingidentity/terraform-provider-identitycloud/internal/types"
 )
 
 var (
@@ -39,12 +40,18 @@ func (r *variableResource) Metadata(_ context.Context, req resource.MetadataRequ
 	resp.TypeName = req.ProviderTypeName + "_variable"
 }
 
-func (r *variableResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
+func (r *variableResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 
-	r.apiClient = req.ProviderData.(*client.APIClient)
+	resourceConfig, ok := req.ProviderData.(internaltypes.ResourceConfiguration)
+	if !ok {
+		resp.Diagnostics.AddError(providererror.InternalProviderError, "Invalid ProviderData when configuring resource. Please report this error in the provider's issue tracker.")
+		return
+	}
+	r.apiClient = resourceConfig.ApiClient
+	r.accessToken = resourceConfig.AccessToken
 }
 
 type variableResourceModel struct {
@@ -87,7 +94,6 @@ func (r *variableResource) Schema(ctx context.Context, req resource.SchemaReques
 						"keyvaluelist",
 					),
 				},
-				Default: stringdefault.StaticString(""),
 			},
 			"id": schema.StringAttribute{
 				Computed: true,

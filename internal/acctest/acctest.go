@@ -2,6 +2,7 @@ package acctest
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"os"
@@ -32,16 +33,26 @@ func ConfigurationPreCheck(t *testing.T) {
 }
 
 // Client to be used directly in tests
-func Client() *client.APIClient {
-	tenantFqdn := os.Getenv("PINGAIC_TF_TENANT_ENV_FQDN")
+func Client(testServerUrl *string) *client.APIClient {
+	clientUrl := fmt.Sprintf("https://%s", os.Getenv("PINGAIC_TF_TENANT_ENV_FQDN"))
+	if testServerUrl != nil {
+		clientUrl = *testServerUrl
+	}
 	clientConfig := client.NewConfiguration()
 	clientConfig.Servers = client.ServerConfigurations{
 		{
-			URL: fmt.Sprintf("https://%s", tenantFqdn),
+			URL: clientUrl,
 		},
 	}
-
 	clientConfig.HTTPClient = &http.Client{}
+	if testServerUrl != nil {
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+		clientConfig.HTTPClient.Transport = tr
+	}
 	return client.NewAPIClient(clientConfig)
 }
 
