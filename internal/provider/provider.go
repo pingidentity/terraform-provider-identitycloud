@@ -171,7 +171,8 @@ func (p *identityCloudProvider) DataSources(_ context.Context) []func() datasour
 // Resources defines the resources implemented in the provider.
 func (p *identityCloudProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		aicresource.VariableResource,
+		aicresource.CertificateResource,
 		aicresource.CustomDomainsResource,
+		aicresource.VariableResource,
 	}
 }
