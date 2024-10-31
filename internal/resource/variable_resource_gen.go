@@ -72,7 +72,7 @@ func (r *variableResource) Schema(ctx context.Context, req resource.SchemaReques
 		Description: "Resource to create and manage a variable. Variables are used to set configuration values that need to be different for each tenant environment. They should not contain secrets.",
 		Attributes: map[string]schema.Attribute{
 			"description": schema.StringAttribute{
-				Description: "Description of the variable.",
+				Description: "Description of the variable. Defaults to an empty string.",
 				Optional:    true,
 				Computed:    true,
 				Validators: []validator.String{

@@ -71,7 +71,7 @@ func (r *customDomainsResource) Schema(ctx context.Context, req resource.SchemaR
 				ElementType: types.StringType,
 				Optional:    true,
 				Computed:    true,
-				Description: "Custom domains",
+				Description: "The custom domains. Defaults to an empty list.",
 				Default:     listdefault.StaticValue(domainsDefault),
 			},
 			"realm": schema.StringAttribute{

@@ -70,7 +70,7 @@ func (r *certificateResource) Schema(ctx context.Context, req resource.SchemaReq
 			"active": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "The active status of the certificate. Set this to true for the certificate to actively be served.",
+				Description: "The active status of the certificate. Set this to true for the certificate to actively be served. Defaults to `true`.",
 				Default:     booldefault.StaticBool(true),
 			},
 			"certificate": schema.StringAttribute{
