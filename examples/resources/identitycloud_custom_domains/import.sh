@@ -1,0 +1,1 @@
+terraform import identitycloud_custom_domains.example realm_id
