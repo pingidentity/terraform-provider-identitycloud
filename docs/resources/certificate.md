@@ -29,7 +29,7 @@ resource "identitycloud_certificate" "example" {
 
 ### Optional
 
-- `active` (Boolean) The active status of the certificate. Set this to true for the certificate to actively be served.
+- `active` (Boolean) The active status of the certificate. Set this to true for the certificate to actively be served. Defaults to `true`.
 
 ### Read-Only
 

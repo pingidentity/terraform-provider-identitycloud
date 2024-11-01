@@ -1,0 +1,1 @@
+terraform import identitycloud_cookie_domains.example id
