@@ -35,8 +35,9 @@ type aicErrorResponse struct {
 func ReportHttpError(ctx context.Context, diagnostics *diag.Diagnostics, errorSummary string, err error, httpResp *http.Response) {
 	httpErrorPrinted := false
 	var internalError error
+	var body []byte
 	if httpResp != nil {
-		body, internalError := io.ReadAll(httpResp.Body)
+		body, internalError = io.ReadAll(httpResp.Body)
 		if internalError == nil {
 			tflog.Debug(ctx, "Error HTTP response body: "+string(body))
 			var aicError aicErrorResponse
