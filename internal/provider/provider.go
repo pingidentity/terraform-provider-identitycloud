@@ -18,6 +18,7 @@ import (
 	client "github.com/pingidentity/identitycloud-go-client/identitycloud"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/providererror"
 	aicresource "github.com/pingidentity/terraform-provider-identitycloud/internal/resource"
+	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/certificate"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/variable"
 	internaltypes "github.com/pingidentity/terraform-provider-identitycloud/internal/types"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/utils"
@@ -172,7 +173,7 @@ func (p *identityCloudProvider) DataSources(_ context.Context) []func() datasour
 // Resources defines the resources implemented in the provider.
 func (p *identityCloudProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		aicresource.CertificateResource,
+		certificate.CertificateResource,
 		aicresource.CookieDomainsResource,
 		aicresource.CustomDomainsResource,
 		variable.VariableResource,
