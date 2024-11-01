@@ -17,9 +17,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	client "github.com/pingidentity/identitycloud-go-client/identitycloud"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/providererror"
-	aicresource "github.com/pingidentity/terraform-provider-identitycloud/internal/resource"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/certificate"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/cookiedomains"
+	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/customdomains"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/variable"
 	internaltypes "github.com/pingidentity/terraform-provider-identitycloud/internal/types"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/utils"
@@ -176,7 +176,7 @@ func (p *identityCloudProvider) Resources(_ context.Context) []func() resource.R
 	return []func() resource.Resource{
 		certificate.CertificateResource,
 		cookiedomains.CookieDomainsResource,
-		aicresource.CustomDomainsResource,
+		customdomains.CustomDomainsResource,
 		variable.VariableResource,
 	}
 }

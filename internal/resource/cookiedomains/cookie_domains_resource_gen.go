@@ -122,9 +122,9 @@ func (r *cookieDomainsResource) Create(ctx context.Context, req resource.CreateR
 	resp.Diagnostics.Append(diags...)
 	apiUpdateRequest := r.apiClient.CookieDomainsAPI.SetCookieDomains(auth.AuthContext(ctx, r.accessToken))
 	apiUpdateRequest = apiUpdateRequest.Body(*clientData)
-	responseData, _, err := r.apiClient.CookieDomainsAPI.SetCookieDomainsExecute(apiUpdateRequest)
+	responseData, httpResp, err := r.apiClient.CookieDomainsAPI.SetCookieDomainsExecute(apiUpdateRequest)
 	if err != nil {
-		resp.Diagnostics.AddError("An error occurred while creating the cookieDomains", err.Error())
+		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while creating the cookieDomains", err, httpResp)
 		return
 	}
 
@@ -200,9 +200,9 @@ func (r *cookieDomainsResource) Delete(ctx context.Context, req resource.DeleteR
 	defaultClientData := r.buildDefaultClientStruct()
 	apiUpdateRequest := r.apiClient.CookieDomainsAPI.SetCookieDomains(auth.AuthContext(ctx, r.accessToken))
 	apiUpdateRequest = apiUpdateRequest.Body(*defaultClientData)
-	_, _, err := r.apiClient.CookieDomainsAPI.SetCookieDomainsExecute(apiUpdateRequest)
+	_, httpResp, err := r.apiClient.CookieDomainsAPI.SetCookieDomainsExecute(apiUpdateRequest)
 	if err != nil {
-		resp.Diagnostics.AddError("An error occurred while resetting the cookieDomains", err.Error())
+		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while resetting the cookieDomains", err, httpResp)
 	}
 }
 
