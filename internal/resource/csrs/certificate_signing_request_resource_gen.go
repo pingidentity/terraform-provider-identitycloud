@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -80,10 +79,6 @@ type certificateSigningRequestResourceModel struct {
 }
 
 func (r *certificateSigningRequestResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	// subject_alternative_names default
-	subjectAlternativeNamesDefault, diags := types.SetValue(types.StringType, nil)
-	resp.Diagnostics.Append(diags...)
-
 	resp.Schema = schema.Schema{
 		Description: "Resource to create and manage a certificate signing request.",
 		Attributes: map[string]schema.Attribute{
@@ -229,12 +224,10 @@ func (r *certificateSigningRequestResource) Schema(ctx context.Context, req reso
 			"subject_alternative_names": schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Computed:    true,
-				Description: "Additional domain or domains that the SSL certificate is securing. Defaults to empty list.",
+				Description: "Additional domain or domains that the SSL certificate is securing.",
 				PlanModifiers: []planmodifier.Set{
 					setplanmodifier.RequiresReplace(),
 				},
-				Default: setdefault.StaticValue(subjectAlternativeNamesDefault),
 			},
 		},
 	}
@@ -285,8 +278,6 @@ func (model *certificateSigningRequestResourceModel) buildClientStruct() (*clien
 
 func (state *certificateSigningRequestResourceModel) readClientResponse(response *client.CertificateSigningRequest) diag.Diagnostics {
 	var respDiags, diags diag.Diagnostics
-	// algorithm
-	state.Algorithm = types.StringPointerValue(response.Algorithm)
 	// certificate_id
 	state.CertificateId = types.StringPointerValue(response.CertificateID)
 	// created_date

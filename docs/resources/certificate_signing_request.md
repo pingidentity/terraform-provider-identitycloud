@@ -14,7 +14,7 @@ Resource to create and manage a certificate signing request.
 
 ```terraform
 resource "identitycloud_certificate_signing_request" "example" {
-  algorithm                 = "ecdsa"
+  algorithm                 = "rsa"
   business_category         = "Example"
   city                      = "Austin"
   common_name               = "Ping"
@@ -53,7 +53,7 @@ resource "identitycloud_certificate_signing_request" "example" {
 - `serial_number` (String) The Registration (or similar) Number assigned to the Subject by the Incorporating or Registration Agency in its Jurisdiction of Incorporation or Registration. Relevant for EV certificates.
 - `state` (String) State for the CSR
 - `street_address` (String) Street address for the CSR
-- `subject_alternative_names` (Set of String) Additional domain or domains that the SSL certificate is securing. Defaults to empty list.
+- `subject_alternative_names` (Set of String) Additional domain or domains that the SSL certificate is securing.
 
 ### Read-Only
 

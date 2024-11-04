@@ -1,5 +1,5 @@
 resource "identitycloud_certificate_signing_request" "example" {
-  algorithm                 = "ecdsa"
+  algorithm                 = "rsa"
   business_category         = "Example"
   city                      = "Austin"
   common_name               = "Ping"

@@ -4,10 +4,6 @@ package csrs_test
 
 import (
 	"fmt"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
@@ -16,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/acctest"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/provider"
-	"github.com/pingidentity/terraform-provider-identitycloud/internal/utils"
 )
 
 const certificateSigningRequestId = "certificateSigningRequestId"
@@ -24,12 +19,6 @@ const certificateSigningRequestId = "certificateSigningRequestId"
 var certificateSigningRequestTestServerUrl *string
 
 func TestAccCertificateSigningRequest_RemovalDrift(t *testing.T) {
-	if strings.ToLower(os.Getenv("PINGAIC_TF_TEST_MOCK_SERVICE")) == "true" {
-		testServer := certificateSigningRequest_MockHttpServer()
-		certificateSigningRequestTestServerUrl = utils.Pointer(testServer.URL)
-		os.Setenv("PINGAIC_TF_TEST_OVERRIDE_URL", testServer.URL)
-		defer testServer.Close()
-	}
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -54,12 +43,6 @@ func TestAccCertificateSigningRequest_RemovalDrift(t *testing.T) {
 }
 
 func TestAccCertificateSigningRequest_MinimalMaximal(t *testing.T) {
-	if strings.ToLower(os.Getenv("PINGAIC_TF_TEST_MOCK_SERVICE")) == "true" {
-		testServer := certificateSigningRequest_MockHttpServer()
-		certificateSigningRequestTestServerUrl = utils.Pointer(testServer.URL)
-		os.Setenv("PINGAIC_TF_TEST_OVERRIDE_URL", testServer.URL)
-		defer testServer.Close()
-	}
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -132,11 +115,11 @@ resource "identitycloud_certificate_signing_request" "example" {
 func certificateSigningRequest_CheckComputedValuesMinimal() resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
 		resource.TestCheckResourceAttr("identitycloud_certificate_signing_request.example", "algorithm", "rsa"),
-		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request.example", "certificate_id"),
+		resource.TestCheckNoResourceAttr("identitycloud_certificate_signing_request.example", "certificate_id"),
 		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request.example", "id"),
 		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request.example", "created_date"),
 		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request.example", "request"),
-		resource.TestCheckResourceAttr("identitycloud_certificate_signing_request.example", "subject", "cn=example"),
+		resource.TestCheckNoResourceAttr("identitycloud_certificate_signing_request.example", "subject"),
 		resource.TestCheckResourceAttr("identitycloud_certificate_signing_request.example", "subject_alternative_names.#", "0"),
 	)
 }
@@ -144,11 +127,11 @@ func certificateSigningRequest_CheckComputedValuesMinimal() resource.TestCheckFu
 // Validate any computed values when applying complete HCL
 func certificateSigningRequest_CheckComputedValuesComplete() resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
-		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request.example", "certificate_id"),
+		resource.TestCheckNoResourceAttr("identitycloud_certificate_signing_request.example", "certificate_id"),
 		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request.example", "id"),
 		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request.example", "created_date"),
 		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request.example", "request"),
-		resource.TestCheckResourceAttr("identitycloud_certificate_signing_request.example", "subject", "cn=example"),
+		resource.TestCheckResourceAttr("identitycloud_certificate_signing_request.example", "subject", "C=US/ST=TX/L=Austin/streetAddress=1234 Example St/O=Ping/OU=Example/CN=Ping/SERIALNUMBER=123456/emailAddress=example@example.com/businessCategory=Example/jurisdictionCountryName=US/jurisdictionLocalityName=Austin/jurisdictionStateOrProvinceName=TX"),
 	)
 }
 
@@ -164,28 +147,9 @@ func certificateSigningRequest_Delete(t *testing.T) {
 // Test that any objects created by the test are destroyed
 func certificateSigningRequest_CheckDestroy(s *terraform.State) error {
 	testClient := acctest.Client(certificateSigningRequestTestServerUrl)
-	_, err := testClient.CSRsAPI.DeleteCertificateSigningRequestById(acctest.AuthContext(), certificateSigningRequestId).Execute()
+	_, _, err := testClient.CSRsAPI.GetCertificateSigningRequestById(acctest.AuthContext(), certificateSigningRequestId).Execute()
 	if err == nil {
 		return fmt.Errorf("certificate_signing_request still exists after tests. Expected it to be destroyed")
 	}
 	return nil
-}
-
-// Mocking the AIC service for testing
-func certificateSigningRequest_MockHttpServer() *httptest.Server {
-	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var out []byte
-		switch r.Method {
-		case http.MethodGet:
-			//TODO implement mock GET
-		case http.MethodPut:
-			//TODO implement mock PUT
-		case http.MethodDelete:
-			//TODO implement mock DELETE
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Content-API-Version", "1.0")
-		w.WriteHeader(http.StatusOK)
-		w.Write(out)
-	}))
 }
