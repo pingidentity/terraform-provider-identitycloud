@@ -82,7 +82,7 @@ func TestAccCertificateSigningRequest_MinimalMaximal(t *testing.T) {
 // Minimal HCL with only required values set
 func certificateSigningRequest_MinimalHCL() string {
 	return `
-resource "identitycloud_certificate_signing_request" "example" {
+resource "identitycloud_certificate_signing_request_export" "example" {
 }
 `
 }
@@ -90,7 +90,7 @@ resource "identitycloud_certificate_signing_request" "example" {
 // Maximal HCL with all values set where possible
 func certificateSigningRequest_CompleteHCL() string {
 	return `
-resource "identitycloud_certificate_signing_request" "example" {
+resource "identitycloud_certificate_signing_request_export" "example" {
   algorithm = "ecdsa"
   business_category = "Example"
   city = "Austin"
@@ -114,24 +114,24 @@ resource "identitycloud_certificate_signing_request" "example" {
 // Validate any computed values when applying minimal HCL
 func certificateSigningRequest_CheckComputedValuesMinimal() resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
-		resource.TestCheckResourceAttr("identitycloud_certificate_signing_request.example", "algorithm", "rsa"),
-		resource.TestCheckNoResourceAttr("identitycloud_certificate_signing_request.example", "certificate_id"),
-		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request.example", "id"),
-		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request.example", "created_date"),
-		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request.example", "request"),
-		resource.TestCheckNoResourceAttr("identitycloud_certificate_signing_request.example", "subject"),
-		resource.TestCheckResourceAttr("identitycloud_certificate_signing_request.example", "subject_alternative_names.#", "0"),
+		resource.TestCheckResourceAttr("identitycloud_certificate_signing_request_export.example", "algorithm", "rsa"),
+		resource.TestCheckNoResourceAttr("identitycloud_certificate_signing_request_export.example", "certificate_id"),
+		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request_export.example", "id"),
+		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request_export.example", "created_date"),
+		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request_export.example", "request"),
+		resource.TestCheckNoResourceAttr("identitycloud_certificate_signing_request_export.example", "subject"),
+		resource.TestCheckResourceAttr("identitycloud_certificate_signing_request_export.example", "subject_alternative_names.#", "0"),
 	)
 }
 
 // Validate any computed values when applying complete HCL
 func certificateSigningRequest_CheckComputedValuesComplete() resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
-		resource.TestCheckNoResourceAttr("identitycloud_certificate_signing_request.example", "certificate_id"),
-		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request.example", "id"),
-		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request.example", "created_date"),
-		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request.example", "request"),
-		resource.TestCheckResourceAttr("identitycloud_certificate_signing_request.example", "subject", "C=US/ST=TX/L=Austin/streetAddress=1234 Example St/O=Ping/OU=Example/CN=Ping/SERIALNUMBER=123456/emailAddress=example@example.com/businessCategory=Example/jurisdictionCountryName=US/jurisdictionLocalityName=Austin/jurisdictionStateOrProvinceName=TX"),
+		resource.TestCheckNoResourceAttr("identitycloud_certificate_signing_request_export.example", "certificate_id"),
+		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request_export.example", "id"),
+		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request_export.example", "created_date"),
+		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request_export.example", "request"),
+		resource.TestCheckResourceAttr("identitycloud_certificate_signing_request_export.example", "subject", "C=US/ST=TX/L=Austin/streetAddress=1234 Example St/O=Ping/OU=Example/CN=Ping/SERIALNUMBER=123456/emailAddress=example@example.com/businessCategory=Example/jurisdictionCountryName=US/jurisdictionLocalityName=Austin/jurisdictionStateOrProvinceName=TX"),
 	)
 }
 
@@ -149,7 +149,7 @@ func certificateSigningRequest_CheckDestroy(s *terraform.State) error {
 	testClient := acctest.Client(certificateSigningRequestTestServerUrl)
 	_, _, err := testClient.CSRsAPI.GetCertificateSigningRequestById(acctest.AuthContext(), certificateSigningRequestId).Execute()
 	if err == nil {
-		return fmt.Errorf("certificate_signing_request still exists after tests. Expected it to be destroyed")
+		return fmt.Errorf("certificate_signing_request_export still exists after tests. Expected it to be destroyed")
 	}
 	return nil
 }

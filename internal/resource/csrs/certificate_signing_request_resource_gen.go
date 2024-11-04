@@ -37,7 +37,7 @@ type certificateSigningRequestResource struct {
 }
 
 func (r *certificateSigningRequestResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_certificate_signing_request"
+	resp.TypeName = req.ProviderTypeName + "_certificate_signing_request_export"
 }
 
 func (r *certificateSigningRequestResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

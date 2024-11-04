@@ -1,4 +1,4 @@
-resource "identitycloud_certificate_signing_request" "example" {
+resource "identitycloud_certificate_signing_request_export" "example" {
   algorithm                 = "rsa"
   business_category         = "Example"
   city                      = "Austin"
