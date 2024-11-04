@@ -140,7 +140,7 @@ jobs:
           echo "\"make terrafmtlint\" before submitting the code for review."; \
           exit 1; \
           fi
-  acceptancemockservice:
+  acceptance:
     name: Acceptance Tests
     needs:
       [fmt, vet, lint, generate, importfmt, tfproviderlint, tflint, terrafmt]
@@ -156,28 +156,13 @@ jobs:
         with:
           terraform_version: "1.4.*"
           terraform_wrapper: false
-      - run: make testaccmockservice
+      - run: sudo apt-get install jose
+      - run: ./scripts/get-acctest-access-token.sh
+        env:
+          SERVICE_ACCOUNT_ID: ${{ secrets.SERVICE_ACCOUNT_ID }}
+          SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.SERVICE_ACCOUNT_PRIVATE_KEY }}
+          PINGAIC_TF_TENANT_ENV_FQDN: ${{ secrets.PINGAIC_TF_TENANT_ENV_FQDN }}
+      - run: export PINGAIC_TF_ACCESS_TOKEN=$(cat ./access_token.txt) && make testacc
         env:
           TF_ACC: "1"
-          CONFIG: ${{ secrets.Config }}
-  # Uncomment to enable acceptance tests on the real service
-  # acceptance:
-  #   name: Acceptance Tests
-  #   needs:
-  #     [fmt, vet, lint, generate, importfmt, tfproviderlint, tflint, terrafmt]
-  #   if: ${{ github.actor != 'dependabot[bot]' }}
-  #   runs-on: ubuntu-20.04
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-go@v5
-  #       with:
-  #         go-version-file: "go.mod"
-  #         cache: true
-  #     - uses: hashicorp/setup-terraform@v3
-  #       with:
-  #         terraform_version: "1.4.*"
-  #         terraform_wrapper: false
-  #     - run: make testacc
-  #       env:
-  #         TF_ACC: "1"
-  #         CONFIG: ${{ secrets.Config }}
+          PINGAIC_TF_TENANT_ENV_FQDN: ${{ secrets.PINGAIC_TF_TENANT_ENV_FQDN }}

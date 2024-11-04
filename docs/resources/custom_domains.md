@@ -23,7 +23,7 @@ resource "identitycloud_custom_domains" "example" {
 
 ### Optional
 
-- `domains` (List of String) The custom domains. Defaults to an empty list.
+- `domains` (Set of String) The custom domains. Defaults to an empty set.
 - `realm` (String) Realm for the domain. Supported values are `alpha`, `bravo`.
 
 ## Import

@@ -23,7 +23,10 @@ testaccmockservice:
 	PINGAIC_TF_TEST_MOCK_SERVICE=true PINGAIC_TF_TENANT_ENV_FQDN= TF_ACC=1 go test ./internal/... -timeout 10m -v -count=1
 
 testacc:
-	TF_ACC=1 go test ./internal/... -timeout 10m -v -count=1
+	TF_ACC=1 go test ./internal/resource/... -timeout 10m -v -count=1
+
+testaccfolder:
+	TF_ACC=1 go test ./internal/resource/${ACC_TEST_FOLDER}... -timeout 10m -v -count=1
 
 devcheck: install golangcilint generate tfproviderlint tflint terrafmtlint importfmtlint testacc
 
