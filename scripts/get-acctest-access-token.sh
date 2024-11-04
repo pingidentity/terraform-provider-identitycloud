@@ -42,7 +42,7 @@ ACCESS_TOKEN=$(curl \
 --data "client_id=service-account" \
 --data "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer" \
 --data "assertion=$(< jwt.txt)" \
---data "scope=fr:idm:*" | jq ".access_token")
+--data "scope=fr:idc:certificate:* fr:idc:content-security-policy:* fr:idc:cookie-domain:* fr:idc:custom-domain:* fr:idc:esv:* fr:idc:promotion:* fr:idc:sso-cookie:*" | jq ".access_token")
 
 echo "${ACCESS_TOKEN}" > access_token.txt
 
