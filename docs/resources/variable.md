@@ -26,13 +26,13 @@ resource "identitycloud_variable" "example" {
 
 ### Required
 
+- `expression_type` (String) The type of variable expression. Supported values are `string`, `list`, `array`, `object`, `bool`, `int`, `number`, `base64encodedinlined`, `keyvaluelist`.
 - `value_base64` (String) Base64 encoded value of the variable.
 - `variable_id` (String) ID of the variable
 
 ### Optional
 
 - `description` (String) Description of the variable. Defaults to an empty string.
-- `expression_type` (String) The type of variable expression. Supported values are `string`, `list`, `array`, `object`, `bool`, `int`, `number`, `base64encodedinlined`, `keyvaluelist`.
 
 ### Read-Only
 

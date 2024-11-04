@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	client "github.com/pingidentity/identitycloud-go-client/identitycloud"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/auth"
@@ -50,23 +50,23 @@ func (r *cookieDomainsResource) Configure(_ context.Context, req resource.Config
 }
 
 type cookieDomainsResourceModel struct {
-	Domains types.List `tfsdk:"domains"`
+	Domains types.Set `tfsdk:"domains"`
 }
 
 func (r *cookieDomainsResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	// domains default
-	domainsDefault, diags := types.ListValue(types.StringType, nil)
+	domainsDefault, diags := types.SetValue(types.StringType, nil)
 	resp.Diagnostics.Append(diags...)
 
 	resp.Schema = schema.Schema{
 		Description: "Resource to create and manage the cookie domains.",
 		Attributes: map[string]schema.Attribute{
-			"domains": schema.ListAttribute{
+			"domains": schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
 				Computed:    true,
-				Description: "The cookie domains. Defaults to an empty list.",
-				Default:     listdefault.StaticValue(domainsDefault),
+				Description: "The cookie domains. Defaults to an empty set.",
+				Default:     setdefault.StaticValue(domainsDefault),
 			},
 		},
 	}
@@ -95,7 +95,7 @@ func (model *cookieDomainsResource) buildDefaultClientStruct() *client.CookieDom
 func (state *cookieDomainsResourceModel) readClientResponse(response *client.CookieDomains) diag.Diagnostics {
 	var respDiags, diags diag.Diagnostics
 	// domains
-	state.Domains, diags = types.ListValueFrom(context.Background(), types.StringType, response.Domains)
+	state.Domains, diags = types.SetValueFrom(context.Background(), types.StringType, response.Domains)
 	respDiags.Append(diags...)
 	return respDiags
 }
@@ -103,7 +103,7 @@ func (state *cookieDomainsResourceModel) readClientResponse(response *client.Coo
 // Set all non-primitive attributes to null with appropriate attribute types
 func (r *cookieDomainsResource) emptyModel() cookieDomainsResourceModel {
 	var model cookieDomainsResourceModel
-	model.Domains = types.ListNull(types.StringType)
+	model.Domains = types.SetNull(types.StringType)
 	return model
 }
 

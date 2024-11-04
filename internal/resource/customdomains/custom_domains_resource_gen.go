@@ -10,8 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -55,24 +55,24 @@ func (r *customDomainsResource) Configure(_ context.Context, req resource.Config
 }
 
 type customDomainsResourceModel struct {
-	Domains types.List   `tfsdk:"domains"`
+	Domains types.Set    `tfsdk:"domains"`
 	Realm   types.String `tfsdk:"realm"`
 }
 
 func (r *customDomainsResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	// domains default
-	domainsDefault, diags := types.ListValue(types.StringType, nil)
+	domainsDefault, diags := types.SetValue(types.StringType, nil)
 	resp.Diagnostics.Append(diags...)
 
 	resp.Schema = schema.Schema{
 		Description: "Resource to create and manage the custom domains.",
 		Attributes: map[string]schema.Attribute{
-			"domains": schema.ListAttribute{
+			"domains": schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
 				Computed:    true,
-				Description: "The custom domains. Defaults to an empty list.",
-				Default:     listdefault.StaticValue(domainsDefault),
+				Description: "The custom domains. Defaults to an empty set.",
+				Default:     setdefault.StaticValue(domainsDefault),
 			},
 			"realm": schema.StringAttribute{
 				Optional:    true,
@@ -114,7 +114,7 @@ func (model *customDomainsResource) buildDefaultClientStruct() *client.CustomDom
 func (state *customDomainsResourceModel) readClientResponse(response *client.CustomDomains) diag.Diagnostics {
 	var respDiags, diags diag.Diagnostics
 	// domains
-	state.Domains, diags = types.ListValueFrom(context.Background(), types.StringType, response.Domains)
+	state.Domains, diags = types.SetValueFrom(context.Background(), types.StringType, response.Domains)
 	respDiags.Append(diags...)
 	return respDiags
 }

@@ -22,7 +22,7 @@ resource "identitycloud_cookie_domains" "example" {
 
 ### Optional
 
-- `domains` (List of String) The cookie domains. Defaults to an empty list.
+- `domains` (Set of String) The cookie domains. Defaults to an empty set.
 
 ## Import
 

@@ -59,7 +59,7 @@ type certificateResourceModel struct {
 	Live                    types.Bool   `tfsdk:"live"`
 	PrivateKey              types.String `tfsdk:"private_key"`
 	Subject                 types.String `tfsdk:"subject"`
-	SubjectAlternativeNames types.List   `tfsdk:"subject_alternative_names"`
+	SubjectAlternativeNames types.Set    `tfsdk:"subject_alternative_names"`
 	ValidFromTime           types.String `tfsdk:"valid_from_time"`
 }
 
@@ -110,7 +110,7 @@ func (r *certificateResource) Schema(ctx context.Context, req resource.SchemaReq
 				Computed:    true,
 				Description: "The subject DN of the certificate",
 			},
-			"subject_alternative_names": schema.ListAttribute{
+			"subject_alternative_names": schema.SetAttribute{
 				ElementType: types.StringType,
 				Computed:    true,
 				Description: "Domains associated by with the certificate via the Subject Alternative Name extension. The common name should be included in the SANs as well.",
@@ -149,7 +149,7 @@ func (state *certificateResourceModel) readClientResponse(response *client.Certi
 	// subject
 	state.Subject = types.StringPointerValue(response.Subject)
 	// subject_alternative_names
-	state.SubjectAlternativeNames, diags = types.ListValueFrom(context.Background(), types.StringType, response.SubjectAlternativeNames)
+	state.SubjectAlternativeNames, diags = types.SetValueFrom(context.Background(), types.StringType, response.SubjectAlternativeNames)
 	respDiags.Append(diags...)
 	// valid_from_time
 	state.ValidFromTime = types.StringPointerValue(response.ValidFromTime)

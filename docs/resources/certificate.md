@@ -29,7 +29,7 @@ resource "identitycloud_certificate" "example" {
 
 ### Optional
 
-- `active` (Boolean) The active status of the certificate. Set this to true for the certificate to actively be served. Defaults to `true`.
+- `active` (Boolean) The active status of the certificate. Set this to true for the certificate to actively be served. Defaults to `false`.
 
 ### Read-Only
 
@@ -38,5 +38,5 @@ resource "identitycloud_certificate" "example" {
 - `issuer` (String) The issuer DN of the certificate
 - `live` (Boolean) The live status of the certificate. This is automatically set by the system and indicates if the certificate is currently live externally.
 - `subject` (String) The subject DN of the certificate
-- `subject_alternative_names` (List of String) Domains associated by with the certificate via the Subject Alternative Name extension. The common name should be included in the SANs as well.
+- `subject_alternative_names` (Set of String) Domains associated by with the certificate via the Subject Alternative Name extension. The common name should be included in the SANs as well.
 - `valid_from_time` (String) The notBefore time of the certificate.
