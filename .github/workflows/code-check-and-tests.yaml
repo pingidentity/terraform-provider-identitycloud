@@ -156,6 +156,7 @@ jobs:
         with:
           terraform_version: "1.4.*"
           terraform_wrapper: false
+      - run: sudo apt-get install jose
       - run: ./scripts/get-acctest-access-token.sh
         env:
           SERVICE_ACCOUNT_ID: ${{ secrets.SERVICE_ACCOUNT_ID }}
