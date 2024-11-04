@@ -6,9 +6,8 @@ on:
     - cron: "0 7 * * *"
 
 jobs:
-  acceptancemockservice:
+  acceptance:
     name: Acceptance Tests
-    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
       matrix:
@@ -17,6 +16,7 @@ jobs:
           - "1.5.*"
           - "1.6.*"
       max-parallel: 1
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -25,35 +25,15 @@ jobs:
           cache: true
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ${{ matrix.terraform }}
+          terraform_version: "1.4.*"
           terraform_wrapper: false
-      - run: make testaccmockservice
+      - run: ./scripts/get-acctest-access-token.sh
+        env:
+          SERVICE_ACCOUNT_ID: ${{ secrets.SERVICE_ACCOUNT_ID }}
+          SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.SERVICE_ACCOUNT_PRIVATE_KEY }}
+          PINGAIC_TF_TENANT_ENV_FQDN: ${{ secrets.PINGAIC_TF_TENANT_ENV_FQDN }}
+      - run: export PINGAIC_TF_ACCESS_TOKEN=$(cat ./access_token.txt) && make testacc
         env:
           TF_ACC: "1"
-          CONFIG: ${{ secrets.Config }}
-  # Uncomment to enable acceptance tests on the real service 
-  # acceptance:
-  #   name: Acceptance Tests
-  #   runs-on: ubuntu-20.04
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       terraform:
-  #         - "1.4.*"
-  #         - "1.5.*"
-  #         - "1.6.*"
-  #     max-parallel: 1
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-go@v5
-  #       with:
-  #         go-version-file: "go.mod"
-  #         cache: true
-  #     - uses: hashicorp/setup-terraform@v3
-  #       with:
-  #         terraform_version: ${{ matrix.terraform }}
-  #         terraform_wrapper: false
-  #     - run: make testacc
-  #       env:
-  #         TF_ACC: "1"
-  #         CONFIG: ${{ secrets.Config }}
+          PINGAIC_TF_TENANT_ENV_FQDN: ${{ secrets.PINGAIC_TF_TENANT_ENV_FQDN }}
+
