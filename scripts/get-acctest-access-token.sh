@@ -46,7 +46,7 @@ ACCESS_TOKEN=$(curl \
 
 echo "${ACCESS_TOKEN}" > access_token.txt
 
-FILESIZE=$(stat -c%s "$ACCESS_TOKEN")
+FILESIZE=$(stat -c%s access_token.txt)
 echo "Size of token = $FILESIZE bytes."
 
 echo "Access token created"
