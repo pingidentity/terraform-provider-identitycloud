@@ -25,7 +25,7 @@ resource "identitycloud_certificate" "example" {
 ### Required
 
 - `certificate` (String) The PEM formatted certificate.
-- `private_key` (String) The private key for the certificate. For security reasons, only insert requests include this field.
+- `private_key` (String, Sensitive) The private key for the certificate. For security reasons, only insert requests include this field.
 
 ### Optional
 

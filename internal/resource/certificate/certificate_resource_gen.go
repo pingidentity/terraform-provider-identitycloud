@@ -101,6 +101,7 @@ func (r *certificateResource) Schema(ctx context.Context, req resource.SchemaReq
 			},
 			"private_key": schema.StringAttribute{
 				Required:    true,
+				Sensitive:   true,
 				Description: "The private key for the certificate. For security reasons, only insert requests include this field.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
