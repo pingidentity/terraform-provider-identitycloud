@@ -26,9 +26,27 @@ func AddResourceNotFoundWarning(ctx context.Context, diagnostics *diag.Diagnosti
 	}
 }
 
-type aicErrorResponse struct {
+type AicErrorResponse struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
+}
+
+func ReadErrorResponse(ctx context.Context, httpResp *http.Response) (*AicErrorResponse, []byte) {
+	if httpResp == nil {
+		return nil, nil
+	}
+	var aicError AicErrorResponse
+
+	defer httpResp.Body.Close()
+	body, err := io.ReadAll(httpResp.Body)
+	if err == nil {
+		err = json.Unmarshal(body, &aicError)
+		if err == nil {
+			return &aicError, body
+		}
+		return nil, body
+	}
+	return nil, nil
 }
 
 // Report an HTTP error
@@ -39,21 +57,7 @@ func ReportHttpError(ctx context.Context, diagnostics *diag.Diagnostics, errorSu
 	if httpResp != nil {
 		body, internalError = io.ReadAll(httpResp.Body)
 		if internalError == nil {
-			tflog.Debug(ctx, "Error HTTP response body: "+string(body))
-			var aicError aicErrorResponse
-			internalError = json.Unmarshal(body, &aicError)
-			if internalError == nil {
-				var errorDetail strings.Builder
-				errorDetail.WriteString("Error summary: ")
-				errorDetail.WriteString(errorSummary)
-				errorDetail.WriteString("\nMessage: ")
-				errorDetail.WriteString(aicError.Message)
-				errorDetail.WriteString("\nCode: ")
-				errorDetail.WriteString(strconv.Itoa(aicError.Code))
-				diagnostics.AddError(AicAPIError, errorDetail.String())
-			} else {
-				diagnostics.AddError(AicAPIError, errorSummary+"\n"+err.Error()+" - Detail:\n"+string(body))
-			}
+			ReportHttpErrorBody(ctx, diagnostics, errorSummary, err, body)
 			httpErrorPrinted = true
 		}
 	}
@@ -62,5 +66,28 @@ func ReportHttpError(ctx context.Context, diagnostics *diag.Diagnostics, errorSu
 			tflog.Warn(ctx, "Failed to read HTTP response body: "+internalError.Error())
 		}
 		diagnostics.AddError(AicAPIError, errorSummary+"\n"+err.Error())
+	}
+}
+
+// Report an HTTP error
+func ReportHttpErrorBody(ctx context.Context, diagnostics *diag.Diagnostics, errorSummary string, err error, httpRespBody []byte) {
+	if httpRespBody == nil {
+		diagnostics.AddError(AicAPIError, errorSummary+"\n"+err.Error())
+	} else {
+		tflog.Debug(ctx, "Error HTTP response body: "+string(httpRespBody))
+		var aicError AicErrorResponse
+		internalError := json.Unmarshal(httpRespBody, &aicError)
+		if internalError == nil {
+			var errorDetail strings.Builder
+			errorDetail.WriteString("Error summary: ")
+			errorDetail.WriteString(errorSummary)
+			errorDetail.WriteString("\nMessage: ")
+			errorDetail.WriteString(aicError.Message)
+			errorDetail.WriteString("\nCode: ")
+			errorDetail.WriteString(strconv.Itoa(aicError.Code))
+			diagnostics.AddError(AicAPIError, errorDetail.String())
+		} else {
+			diagnostics.AddError(AicAPIError, errorSummary+"\n"+err.Error()+" - Detail:\n"+string(httpRespBody))
+		}
 	}
 }
