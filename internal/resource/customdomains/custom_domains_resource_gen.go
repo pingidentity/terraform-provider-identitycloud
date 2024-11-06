@@ -124,11 +124,10 @@ func (model *customDomainsResource) buildDefaultClientStruct() *client.CustomDom
 
 func (state *customDomainsResourceModel) readClientResponseShouldRetry(ctx context.Context, response *client.CustomDomains, httpResp *http.Response, err error, diags *diag.Diagnostics) bool {
 	var respDiags diag.Diagnostics
-	// domains
-	state.Domains, respDiags = types.SetValueFrom(context.Background(), types.StringType, response.Domains)
-	diags.Append(respDiags...)
-
 	if err == nil {
+		// domains
+		state.Domains, respDiags = types.SetValueFrom(context.Background(), types.StringType, response.Domains)
+		diags.Append(respDiags...)
 		return false
 	}
 
@@ -173,8 +172,7 @@ func (r *customDomainsResource) Create(ctx context.Context, req resource.CreateR
 		return err
 	})
 
-	if err != nil {
-		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while creating the customDomains", err, httpResp)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -199,7 +197,11 @@ func (r *customDomainsResource) Read(ctx context.Context, req resource.ReadReque
 			providererror.AddResourceNotFoundWarning(ctx, &resp.Diagnostics, "customDomains", httpResp)
 			resp.State.RemoveResource(ctx)
 		} else {
-			providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while reading the customDomains", err, httpResp)
+			aicError, respBody := providererror.ReadErrorResponse(ctx, httpResp)
+			if isFailedCnameValidation(aicError) {
+				resp.State.RemoveResource(ctx)
+			}
+			providererror.ReportHttpErrorBody(ctx, &resp.Diagnostics, "An error occurred while reading the customDomains", err, respBody)
 		}
 		return
 	}
@@ -243,8 +245,7 @@ func (r *customDomainsResource) Update(ctx context.Context, req resource.UpdateR
 		return err
 	})
 
-	if err != nil {
-		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while updating the customDomains", err, httpResp)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 

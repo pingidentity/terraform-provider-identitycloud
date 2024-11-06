@@ -4,6 +4,7 @@ package customdomains
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
@@ -89,7 +90,7 @@ func (model *customDomainVerifyResourceModel) buildClientStruct() (*client.CName
 }
 
 func isFailedCnameValidation(aicError *providererror.AicErrorResponse) bool {
-	return aicError != nil && aicError.Code == 400 && aicError.Message == "CNAME validation failed"
+	return aicError != nil && aicError.Code == 400 && strings.Contains(aicError.Message, "CNAME validation failed")
 }
 
 func (r *customDomainVerifyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
