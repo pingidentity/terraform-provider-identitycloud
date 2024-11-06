@@ -14,7 +14,7 @@ import (
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/provider"
 )
 
-const secretSecretId = "secretSecretId"
+const secretSecretId = "esv-testsecret"
 
 func TestAccSecret_RemovalDrift(t *testing.T) {
 	resource.Test(t, resource.TestCase{
@@ -81,6 +81,8 @@ func TestAccSecret_MinimalMaximal(t *testing.T) {
 				ImportStateVerifyIdentifierAttribute: "secret_id",
 				ImportState:                          true,
 				ImportStateVerify:                    true,
+				// The value of the secret is not returned by the API
+				ImportStateVerifyIgnore: []string{"value_base64"},
 			},
 		},
 	})
@@ -114,32 +116,32 @@ resource "identitycloud_secret" "example" {
 // Validate any computed values when applying minimal HCL
 func secret_CheckComputedValuesMinimal() resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
-		resource.TestCheckResourceAttr("identitycloud_secret.example", "active_version", "expected_value"),
+		resource.TestCheckResourceAttr("identitycloud_secret.example", "active_version", "1"),
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "description", ""),
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "id", secretSecretId),
 		resource.TestCheckResourceAttrSet("identitycloud_secret.example", "last_change_date"),
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "last_changed_by", "tf-provider-testing"),
-		resource.TestCheckResourceAttr("identitycloud_secret.example", "loaded", "false"),
-		resource.TestCheckResourceAttr("identitycloud_secret.example", "loaded_version", "expected_value"),
+		resource.TestCheckResourceAttr("identitycloud_secret.example", "loaded", "true"),
+		resource.TestCheckResourceAttr("identitycloud_secret.example", "loaded_version", "1"),
 	)
 }
 
 // Validate any computed values when applying complete HCL
 func secret_CheckComputedValuesComplete() resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
-		resource.TestCheckResourceAttr("identitycloud_secret.example", "active_version", "expected_value"),
+		resource.TestCheckResourceAttr("identitycloud_secret.example", "active_version", "1"),
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "id", secretSecretId),
 		resource.TestCheckResourceAttrSet("identitycloud_secret.example", "last_change_date"),
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "last_changed_by", "tf-provider-testing"),
-		resource.TestCheckResourceAttr("identitycloud_secret.example", "loaded", "false"),
-		resource.TestCheckResourceAttr("identitycloud_secret.example", "loaded_version", "expected_value"),
+		resource.TestCheckResourceAttr("identitycloud_secret.example", "loaded", "true"),
+		resource.TestCheckResourceAttr("identitycloud_secret.example", "loaded_version", "1"),
 	)
 }
 
 // Delete the resource
 func secret_Delete(t *testing.T) {
 	testClient := acctest.Client(nil)
-	_, err := testClient.CSRsAPI.DeleteCertificateSigningRequestById(acctest.AuthContext(), secretSecretId).Execute()
+	_, _, err := testClient.SecretsAPI.DeleteSecret(acctest.AuthContext(), secretSecretId).Execute()
 	if err != nil {
 		t.Fatalf("Failed to delete config: %v", err)
 	}
@@ -148,7 +150,7 @@ func secret_Delete(t *testing.T) {
 // Test that any objects created by the test are destroyed
 func secret_CheckDestroy(s *terraform.State) error {
 	testClient := acctest.Client(nil)
-	_, err := testClient.CSRsAPI.DeleteCertificateSigningRequestById(acctest.AuthContext(), secretSecretId).Execute()
+	_, _, err := testClient.SecretsAPI.DeleteSecret(acctest.AuthContext(), secretSecretId).Execute()
 	if err == nil {
 		return fmt.Errorf("secret still exists after tests. Expected it to be destroyed")
 	}

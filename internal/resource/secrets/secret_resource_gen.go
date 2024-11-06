@@ -289,7 +289,7 @@ func (r *secretResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	}
 
 	// Delete API call logic
-	httpResp, err := r.apiClient.CSRsAPI.DeleteCertificateSigningRequestById(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString()).Execute()
+	_, httpResp, err := r.apiClient.SecretsAPI.DeleteSecret(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString()).Execute()
 	if err != nil && (httpResp == nil || httpResp.StatusCode != 404) {
 		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while deleting the secret", err, httpResp)
 	}
