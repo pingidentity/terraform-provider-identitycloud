@@ -4,7 +4,10 @@ package customdomains
 
 import (
 	"context"
+	"net/http"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -19,6 +22,7 @@ import (
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/auth"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/providererror"
 	internaltypes "github.com/pingidentity/terraform-provider-identitycloud/internal/types"
+	"github.com/sethvargo/go-retry"
 )
 
 var (
@@ -55,8 +59,9 @@ func (r *customDomainsResource) Configure(_ context.Context, req resource.Config
 }
 
 type customDomainsResourceModel struct {
-	Domains types.Set    `tfsdk:"domains"`
-	Realm   types.String `tfsdk:"realm"`
+	Domains  types.Set      `tfsdk:"domains"`
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
+	Realm    types.String   `tfsdk:"realm"`
 }
 
 func (r *customDomainsResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -87,6 +92,12 @@ func (r *customDomainsResource) Schema(ctx context.Context, req resource.SchemaR
 					),
 				},
 			},
+			"timeouts": timeouts.Attributes(ctx, timeouts.Opts{
+				Create:            true,
+				CreateDescription: "A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as \"30s\" or \"2h45m\", as a time to wait for DNS record changes to propagate for verification on initial create of the resource. Valid time units are \"s\" (seconds), \"m\" (minutes), \"h\" (hours). The default is 1 minute.",
+				Update:            true,
+				UpdateDescription: "A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as \"30s\" or \"2h45m\", as a time to wait for DNS record changes to propagate for verification on update of the resource. Valid time units are \"s\" (seconds), \"m\" (minutes), \"h\" (hours). The default is 1 minute.",
+			}),
 		},
 	}
 }
@@ -111,12 +122,23 @@ func (model *customDomainsResource) buildDefaultClientStruct() *client.CustomDom
 	return result
 }
 
-func (state *customDomainsResourceModel) readClientResponse(response *client.CustomDomains) diag.Diagnostics {
-	var respDiags, diags diag.Diagnostics
+func (state *customDomainsResourceModel) readClientResponseShouldRetry(ctx context.Context, response *client.CustomDomains, httpResp *http.Response, err error, diags *diag.Diagnostics) bool {
+	var respDiags diag.Diagnostics
 	// domains
-	state.Domains, diags = types.SetValueFrom(context.Background(), types.StringType, response.Domains)
-	respDiags.Append(diags...)
-	return respDiags
+	state.Domains, respDiags = types.SetValueFrom(context.Background(), types.StringType, response.Domains)
+	diags.Append(respDiags...)
+
+	if err == nil {
+		return false
+	}
+
+	aicError, respBody := providererror.ReadErrorResponse(ctx, httpResp)
+	if isFailedCnameValidation(aicError) {
+		return true
+	} else if !diags.HasError() {
+		providererror.ReportHttpErrorBody(ctx, diags, "An error occurred while verifying the custom domain", err, respBody)
+	}
+	return false
 }
 
 func (r *customDomainsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -124,6 +146,9 @@ func (r *customDomainsResource) Create(ctx context.Context, req resource.CreateR
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	// Retry up to the time limit on create
+	createTimeout, diags := data.Timeouts.Create(ctx, 1*time.Minute)
+	resp.Diagnostics.Append(diags...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -134,14 +159,24 @@ func (r *customDomainsResource) Create(ctx context.Context, req resource.CreateR
 	resp.Diagnostics.Append(diags...)
 	apiUpdateRequest := r.apiClient.CustomDomainsAPI.SetCustomDomains(auth.AuthContext(ctx, r.accessToken), data.Realm.ValueString())
 	apiUpdateRequest = apiUpdateRequest.Body(*clientData)
-	responseData, httpResp, err := r.apiClient.CustomDomainsAPI.SetCustomDomainsExecute(apiUpdateRequest)
+
+	retries := retry.NewFibonacci(1 * time.Second)
+	retries = retry.WithMaxDuration(createTimeout, retries)
+	var responseData *client.CustomDomains
+	var httpResp *http.Response
+	var err error
+	retry.Do(ctx, retries, func(ctx context.Context) error {
+		responseData, httpResp, err = r.apiClient.CustomDomainsAPI.SetCustomDomainsExecute(apiUpdateRequest)
+		if data.readClientResponseShouldRetry(ctx, responseData, httpResp, err, &resp.Diagnostics) {
+			return retry.RetryableError(err)
+		}
+		return err
+	})
+
 	if err != nil {
 		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while creating the customDomains", err, httpResp)
 		return
 	}
-
-	// Read response into the model
-	resp.Diagnostics.Append(data.readClientResponse(responseData)...)
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -170,7 +205,7 @@ func (r *customDomainsResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	// Read response into the model
-	resp.Diagnostics.Append(data.readClientResponse(responseData)...)
+	data.readClientResponseShouldRetry(ctx, responseData, httpResp, err, &resp.Diagnostics)
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -181,6 +216,9 @@ func (r *customDomainsResource) Update(ctx context.Context, req resource.UpdateR
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	// Retry up to the time limit on update
+	updateTimeout, diags := data.Timeouts.Update(ctx, 1*time.Minute)
+	resp.Diagnostics.Append(diags...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -191,14 +229,24 @@ func (r *customDomainsResource) Update(ctx context.Context, req resource.UpdateR
 	resp.Diagnostics.Append(diags...)
 	apiUpdateRequest := r.apiClient.CustomDomainsAPI.SetCustomDomains(auth.AuthContext(ctx, r.accessToken), data.Realm.ValueString())
 	apiUpdateRequest = apiUpdateRequest.Body(*clientData)
-	responseData, httpResp, err := r.apiClient.CustomDomainsAPI.SetCustomDomainsExecute(apiUpdateRequest)
+
+	retries := retry.NewFibonacci(1 * time.Second)
+	retries = retry.WithMaxDuration(updateTimeout, retries)
+	var responseData *client.CustomDomains
+	var httpResp *http.Response
+	var err error
+	retry.Do(ctx, retries, func(ctx context.Context) error {
+		responseData, httpResp, err = r.apiClient.CustomDomainsAPI.SetCustomDomainsExecute(apiUpdateRequest)
+		if data.readClientResponseShouldRetry(ctx, responseData, httpResp, err, &resp.Diagnostics) {
+			return retry.RetryableError(err)
+		}
+		return err
+	})
+
 	if err != nil {
 		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while updating the customDomains", err, httpResp)
 		return
 	}
-
-	// Read response into the model
-	resp.Diagnostics.Append(data.readClientResponse(responseData)...)
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
