@@ -1,0 +1,1 @@
+terraform import identitycloud_secret.example secret_id
