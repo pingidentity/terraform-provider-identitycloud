@@ -4,7 +4,6 @@ package customdomains
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
@@ -58,7 +57,6 @@ func (r *customDomainVerifyResource) Configure(_ context.Context, req resource.C
 type customDomainVerifyResourceModel struct {
 	Name     types.String   `tfsdk:"name"`
 	Timeouts timeouts.Value `tfsdk:"timeouts"`
-	Verified types.Bool     `tfsdk:"verified"`
 }
 
 func (r *customDomainVerifyResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -79,10 +77,6 @@ func (r *customDomainVerifyResource) Schema(ctx context.Context, req resource.Sc
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
-			"verified": schema.BoolAttribute{
-				Computed:    true,
-				Description: "True if the domain was verified, false otherwise.",
-			},
 		},
 	}
 }
@@ -96,24 +90,6 @@ func (model *customDomainVerifyResourceModel) buildClientStruct() (*client.CName
 
 func isFailedCnameValidation(aicError *providererror.AicErrorResponse) bool {
 	return aicError != nil && aicError.Code == 400 && aicError.Message == "CNAME validation failed"
-}
-
-// Returns true if the request should be retried
-func (state *customDomainVerifyResourceModel) readClientResponseShouldRetry(ctx context.Context, httpResp *http.Response, err error, diags *diag.Diagnostics) bool {
-	// verified
-	if err == nil {
-		state.Verified = types.BoolValue(true)
-		return false
-	}
-
-	aicError, respBody := providererror.ReadErrorResponse(ctx, httpResp)
-	if isFailedCnameValidation(aicError) {
-		state.Verified = types.BoolValue(false)
-		return true
-	} else if !diags.HasError() {
-		providererror.ReportHttpErrorBody(ctx, diags, "An error occurred while verifying the custom domain", err, respBody)
-	}
-	return false
 }
 
 func (r *customDomainVerifyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -137,13 +113,23 @@ func (r *customDomainVerifyResource) Create(ctx context.Context, req resource.Cr
 
 	retries := retry.NewFibonacci(1 * time.Second)
 	retries = retry.WithMaxDuration(createTimeout, retries)
-	retry.Do(ctx, retries, func(ctx context.Context) error {
+	var aicError *providererror.AicErrorResponse
+	var respBody []byte
+	finalErr := retry.Do(ctx, retries, func(ctx context.Context) error {
 		httpResp, httpErr := r.apiClient.CustomDomainsAPI.VerifyCustomDomainsExecute(apiUpdateRequest)
-		if data.readClientResponseShouldRetry(ctx, httpResp, httpErr, &resp.Diagnostics) {
-			return retry.RetryableError(httpErr)
+		if httpErr != nil {
+			aicError, respBody = providererror.ReadErrorResponse(ctx, httpResp)
+			if isFailedCnameValidation(aicError) {
+				return retry.RetryableError(httpErr)
+			}
 		}
 		return httpErr
 	})
+
+	if finalErr != nil {
+		providererror.ReportHttpErrorBody(ctx, &resp.Diagnostics, "An error occurred while verifying the custom domain", finalErr, respBody)
+		return
+	}
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -166,8 +152,14 @@ func (r *customDomainVerifyResource) Read(ctx context.Context, req resource.Read
 	apiUpdateRequest = apiUpdateRequest.Body(*clientData)
 	httpResp, err := r.apiClient.CustomDomainsAPI.VerifyCustomDomainsExecute(apiUpdateRequest)
 
-	// Read response into the model
-	data.readClientResponseShouldRetry(ctx, httpResp, err, &resp.Diagnostics)
+	if err != nil {
+		aicError, respBody := providererror.ReadErrorResponse(ctx, httpResp)
+		if isFailedCnameValidation(aicError) {
+			resp.State.RemoveResource(ctx)
+		}
+		providererror.ReportHttpErrorBody(ctx, &resp.Diagnostics, "An error occurred while verifying the custom domain", err, respBody)
+		return
+	}
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

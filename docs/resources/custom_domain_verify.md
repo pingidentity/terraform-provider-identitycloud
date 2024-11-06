@@ -33,10 +33,6 @@ resource "identitycloud_custom_domain_verify" "example" {
 
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
 
-### Read-Only
-
-- `verified` (Boolean) True if the domain was verified, false otherwise.
-
 <a id="nestedatt--timeouts"></a>
 ### Nested Schema for `timeouts`
 
