@@ -78,6 +78,10 @@ func customDomains_CompleteHCL() string {
 resource "identitycloud_custom_domains" "example" {
   realm = "%s"
   domains = ["%s"]
+  timeouts = {
+    create = "5s"
+	update = "10s"
+  }
 }
 `, customDomainsRealm, os.Getenv("PINGAIC_TF_TENANT_ENV_FQDN"))
 }

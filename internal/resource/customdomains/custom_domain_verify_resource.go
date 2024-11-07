@@ -169,7 +169,8 @@ func (r *customDomainVerifyResource) Read(ctx context.Context, req resource.Read
 }
 
 func (r *customDomainVerifyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// This resource can't be updated
+	// This resource can't truly be updated, except for the timeouts attribute
+	resp.State.Raw = req.Plan.Raw
 }
 
 func (r *customDomainVerifyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

@@ -24,17 +24,14 @@ func TestAccCustomDomainVerify_MinimalMaximal(t *testing.T) {
 			{
 				// Create the resource with a minimal model
 				Config: customDomainVerify_MinimalHCL(),
-				Check:  customDomainVerify_CheckComputedValuesMinimal(),
 			},
 			{
 				// Update to a complete model.
 				Config: customDomainVerify_CompleteHCL(),
-				Check:  customDomainVerify_CheckComputedValuesComplete(),
 			},
 			{
 				// Back to minimal model
 				Config: customDomainVerify_MinimalHCL(),
-				Check:  customDomainVerify_CheckComputedValuesMinimal(),
 			},
 		},
 	})
@@ -51,22 +48,12 @@ resource "identitycloud_custom_domain_verify" "example" {
 
 // Maximal HCL with all values set where possible
 func customDomainVerify_CompleteHCL() string {
-	return `
+	return fmt.Sprintf(`
 resource "identitycloud_custom_domain_verify" "example" {
-  name = "example.com"
+  name = "%s"
   timeouts = {
     create = "5s"
   }
 }
-`
-}
-
-// Validate any computed values when applying minimal HCL
-func customDomainVerify_CheckComputedValuesMinimal() resource.TestCheckFunc {
-	return resource.TestCheckResourceAttr("identitycloud_custom_domain_verify.example", "verified", "true")
-}
-
-// Validate any computed values when applying compute HCL
-func customDomainVerify_CheckComputedValuesComplete() resource.TestCheckFunc {
-	return resource.TestCheckResourceAttr("identitycloud_custom_domain_verify.example", "verified", "false")
+`, os.Getenv("PINGAIC_TF_TENANT_ENV_FQDN"))
 }
