@@ -16,11 +16,3 @@ Any custom domains will be validated by AIC when set. CNAME record verification 
 {{ tffile (printf "%s%s%s" "examples/resources/" .Name "/resource.tf") }}
 
 {{ .SchemaMarkdown | trimspace }}
-
-## Import
-
-Import is supported using the following syntax:
-
-~> realm_id should be either `alpha` or `bravo`.
-
-{{ codefile "shell" (printf "%s%s%s" "examples/resources/" .Name "/import.sh") }}

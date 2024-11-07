@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -117,9 +118,12 @@ func (r *certificateSigningRequestResource) Schema(ctx context.Context, req reso
 			},
 			"common_name": schema.StringAttribute{
 				Optional:    true,
-				Description: "Domain name that the SSL certificate is securing",
+				Description: "Domain name that the SSL certificate is securing. At least one of `common_name` or `subject_alternative_names` must be specified.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.AtLeastOneOf(path.MatchRelative().AtParent().AtMapKey("subject_alternative_names")),
 				},
 			},
 			"country": schema.StringAttribute{
@@ -224,7 +228,7 @@ func (r *certificateSigningRequestResource) Schema(ctx context.Context, req reso
 			"subject_alternative_names": schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Description: "Additional domain or domains that the SSL certificate is securing.",
+				Description: "Additional domain or domains that the SSL certificate is securing. At least one of `common_name` or `subject_alternative_names` must be specified.",
 				PlanModifiers: []planmodifier.Set{
 					setplanmodifier.RequiresReplace(),
 				},
