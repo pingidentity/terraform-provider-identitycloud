@@ -181,6 +181,7 @@ func (p *identityCloudProvider) Resources(_ context.Context) []func() resource.R
 		csrs.CertificateSigningRequestResource,
 		customdomains.CustomDomainsResource,
 		secrets.SecretResource,
+		secrets.SecretVersionResource,
 		variable.VariableResource,
 	}
 }
