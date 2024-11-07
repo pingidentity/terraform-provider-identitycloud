@@ -20,6 +20,7 @@ import (
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/cookiedomains"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/csrs"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/customdomains"
+	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/secrets"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/variable"
 	internaltypes "github.com/pingidentity/terraform-provider-identitycloud/internal/types"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/utils"
@@ -180,6 +181,7 @@ func (p *identityCloudProvider) Resources(_ context.Context) []func() resource.R
 		csrs.CertificateSigningRequestResource,
 		customdomains.CustomDomainsResource,
 		customdomains.CustomDomainVerifyResource,
+		secrets.SecretResource,
 		variable.VariableResource,
 	}
 }

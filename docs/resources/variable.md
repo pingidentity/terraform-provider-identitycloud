@@ -17,7 +17,7 @@ resource "identitycloud_variable" "example" {
   variable_id     = "esv-myvariable1"
   description     = "My variable"
   expression_type = "list"
-  value_base64    = "ZGF0YQ=="
+  value_base64    = base64encode("[]")
 }
 ```
 
@@ -28,7 +28,7 @@ resource "identitycloud_variable" "example" {
 
 - `expression_type` (String) The type of variable expression. Supported values are `string`, `list`, `array`, `object`, `bool`, `int`, `number`, `base64encodedinlined`, `keyvaluelist`.
 - `value_base64` (String) Base64 encoded value of the variable.
-- `variable_id` (String) ID of the variable
+- `variable_id` (String) ID of the variable. Must match the regex `^esv-[a-z0-9_-]{1,124}$`.
 
 ### Optional
 

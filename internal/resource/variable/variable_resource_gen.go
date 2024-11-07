@@ -122,7 +122,7 @@ func (r *variableResource) Schema(ctx context.Context, req resource.SchemaReques
 			},
 			"variable_id": schema.StringAttribute{
 				Required:    true,
-				Description: "ID of the variable",
+				Description: "ID of the variable. Must match the regex `^esv-[a-z0-9_-]{1,124}$`.",
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(regexp.MustCompile("^esv-[a-z0-9_-]{1,124}$"), ""),
 				},
