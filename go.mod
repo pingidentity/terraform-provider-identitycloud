@@ -1,8 +1,7 @@
 module github.com/pingidentity/terraform-provider-identitycloud
 
 go 1.22.2
-
-toolchain go1.22.3
+toolchain go1.23.3
 
 require (
 	github.com/bflad/tfproviderlint v0.29.0
@@ -18,7 +17,7 @@ require (
 	github.com/pavius/impi v0.0.3
 	github.com/pingidentity/identitycloud-go-client v0.2.0
 	github.com/sethvargo/go-retry v0.3.0
-	github.com/terraform-linters/tflint v0.51.1
+	github.com/terraform-linters/tflint v0.53.0
 )
 
 require (
@@ -132,7 +131,7 @@ require (
 	github.com/hashicorp/go-getter v1.7.5 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/hashicorp/go-plugin v1.6.0 // indirect
+	github.com/hashicorp/go-plugin v1.6.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
 	github.com/hashicorp/go-safetemp v1.0.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
@@ -151,7 +150,7 @@ require (
 	github.com/huandu/xstrings v1.3.3 // indirect
 	github.com/imdario/mergo v0.3.15 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/jessevdk/go-flags v1.5.0 // indirect
+	github.com/jessevdk/go-flags v1.6.1 // indirect
 	github.com/jgautheron/goconst v1.7.1 // indirect
 	github.com/jingyugao/rowserrcheck v1.1.1 // indirect
 	github.com/jirfag/go-printf-func-name v0.0.0-20200119135958-7558a9eaa5af // indirect
@@ -240,8 +239,8 @@ require (
 	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
 	github.com/tdakkota/asciicheck v0.2.0 // indirect
-	github.com/terraform-linters/tflint-plugin-sdk v0.20.0 // indirect
-	github.com/terraform-linters/tflint-ruleset-terraform v0.7.0 // indirect
+	github.com/terraform-linters/tflint-plugin-sdk v0.21.0 // indirect
+	github.com/terraform-linters/tflint-ruleset-terraform v0.9.1 // indirect
 	github.com/tetafro/godot v1.4.17 // indirect
 	github.com/timakin/bodyclose v0.0.0-20230421092635-574207250966 // indirect
 	github.com/timonwong/loggercheck v0.9.4 // indirect
