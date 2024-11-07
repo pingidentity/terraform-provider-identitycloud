@@ -138,7 +138,7 @@ func certificateSigningRequest_CheckComputedValuesComplete() resource.TestCheckF
 
 // Delete the resource
 func certificateSigningRequest_Delete(t *testing.T) {
-	testClient := acctest.Client(certificateSigningRequestTestServerUrl)
+	testClient := acctest.Client()
 	_, err := testClient.CSRsAPI.DeleteCertificateSigningRequestById(acctest.AuthContext(), certificateSigningRequestId).Execute()
 	if err != nil {
 		t.Fatalf("Failed to delete config: %v", err)
@@ -147,7 +147,7 @@ func certificateSigningRequest_Delete(t *testing.T) {
 
 // Test that any objects created by the test are destroyed
 func certificateSigningRequest_CheckDestroy(s *terraform.State) error {
-	testClient := acctest.Client(certificateSigningRequestTestServerUrl)
+	testClient := acctest.Client()
 	_, _, err := testClient.CSRsAPI.GetCertificateSigningRequestById(acctest.AuthContext(), certificateSigningRequestId).Execute()
 	if err == nil {
 		return fmt.Errorf("certificate_signing_request_export still exists after tests. Expected it to be destroyed")

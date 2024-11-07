@@ -140,7 +140,7 @@ func secret_CheckComputedValuesComplete() resource.TestCheckFunc {
 
 // Delete the resource
 func secret_Delete(t *testing.T) {
-	testClient := acctest.Client(nil)
+	testClient := acctest.Client()
 	_, _, err := testClient.SecretsAPI.DeleteSecret(acctest.AuthContext(), secretSecretId).Execute()
 	if err != nil {
 		t.Fatalf("Failed to delete config: %v", err)
@@ -149,7 +149,7 @@ func secret_Delete(t *testing.T) {
 
 // Test that any objects created by the test are destroyed
 func secret_CheckDestroy(s *terraform.State) error {
-	testClient := acctest.Client(nil)
+	testClient := acctest.Client()
 	_, _, err := testClient.SecretsAPI.DeleteSecret(acctest.AuthContext(), secretSecretId).Execute()
 	if err == nil {
 		return fmt.Errorf("secret still exists after tests. Expected it to be destroyed")

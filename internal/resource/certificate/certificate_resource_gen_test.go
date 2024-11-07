@@ -155,7 +155,7 @@ func certificate_CheckComputedValuesComplete() resource.TestCheckFunc {
 
 // Delete the resource
 func certificate_Delete(t *testing.T) {
-	testClient := acctest.Client(certificateTestServerUrl)
+	testClient := acctest.Client()
 	_, err := testClient.CertificatesAPI.DeleteCertificateByID(acctest.AuthContext(), certificateId).Execute()
 	if err != nil {
 		t.Fatalf("Failed to delete config: %v", err)
@@ -164,7 +164,7 @@ func certificate_Delete(t *testing.T) {
 
 // Test that any objects created by the test are destroyed
 func certificate_CheckDestroy(s *terraform.State) error {
-	testClient := acctest.Client(certificateTestServerUrl)
+	testClient := acctest.Client()
 	_, err := testClient.CertificatesAPI.DeleteCertificateByID(acctest.AuthContext(), certificateId).Execute()
 	if err == nil {
 		return fmt.Errorf("certificate still exists after tests. Expected it to be destroyed")
