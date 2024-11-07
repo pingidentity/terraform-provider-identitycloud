@@ -90,7 +90,9 @@ func (model *customDomainVerifyResourceModel) buildClientStruct() (*client.CName
 }
 
 func isFailedCnameValidation(aicError *providererror.AicErrorResponse) bool {
-	return aicError != nil && aicError.Code == 400 && strings.Contains(aicError.Message, "CNAME validation failed")
+	return aicError != nil && aicError.Code == 400 &&
+		(strings.Contains(aicError.Message, "CNAME validation failed") ||
+			strings.Contains(aicError.Message, "CNAME verification failed"))
 }
 
 func (r *customDomainVerifyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -114,11 +116,11 @@ func (r *customDomainVerifyResource) Create(ctx context.Context, req resource.Cr
 
 	retries := retry.NewFibonacci(1 * time.Second)
 	retries = retry.WithMaxDuration(createTimeout, retries)
-	var aicError *providererror.AicErrorResponse
 	var respBody []byte
 	finalErr := retry.Do(ctx, retries, func(ctx context.Context) error {
 		httpResp, httpErr := r.apiClient.CustomDomainsAPI.VerifyCustomDomainsExecute(apiUpdateRequest)
 		if httpErr != nil {
+			var aicError *providererror.AicErrorResponse
 			aicError, respBody = providererror.ReadErrorResponse(ctx, httpResp)
 			if isFailedCnameValidation(aicError) {
 				return retry.RetryableError(httpErr)

@@ -4,7 +4,6 @@ package customdomains
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
@@ -122,22 +121,12 @@ func (model *customDomainsResource) buildDefaultClientStruct() *client.CustomDom
 	return result
 }
 
-func (state *customDomainsResourceModel) readClientResponseShouldRetry(ctx context.Context, response *client.CustomDomains, httpResp *http.Response, err error, diags *diag.Diagnostics) bool {
-	var respDiags diag.Diagnostics
-	if err == nil {
-		// domains
-		state.Domains, respDiags = types.SetValueFrom(context.Background(), types.StringType, response.Domains)
-		diags.Append(respDiags...)
-		return false
-	}
-
-	aicError, respBody := providererror.ReadErrorResponse(ctx, httpResp)
-	if isFailedCnameValidation(aicError) {
-		return true
-	} else if !diags.HasError() {
-		providererror.ReportHttpErrorBody(ctx, diags, "An error occurred while verifying the custom domain", err, respBody)
-	}
-	return false
+func (state *customDomainsResourceModel) readClientResponse(response *client.CustomDomains) diag.Diagnostics {
+	var respDiags, diags diag.Diagnostics
+	// domains
+	state.Domains, diags = types.SetValueFrom(context.Background(), types.StringType, response.Domains)
+	respDiags.Append(diags...)
+	return respDiags
 }
 
 func (r *customDomainsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -161,18 +150,23 @@ func (r *customDomainsResource) Create(ctx context.Context, req resource.CreateR
 
 	retries := retry.NewFibonacci(1 * time.Second)
 	retries = retry.WithMaxDuration(createTimeout, retries)
-	var responseData *client.CustomDomains
-	var httpResp *http.Response
-	var err error
-	retry.Do(ctx, retries, func(ctx context.Context) error {
-		responseData, httpResp, err = r.apiClient.CustomDomainsAPI.SetCustomDomainsExecute(apiUpdateRequest)
-		if data.readClientResponseShouldRetry(ctx, responseData, httpResp, err, &resp.Diagnostics) {
-			return retry.RetryableError(err)
+	var respBody []byte
+	finalErr := retry.Do(ctx, retries, func(ctx context.Context) error {
+		responseData, httpResp, err := r.apiClient.CustomDomainsAPI.SetCustomDomainsExecute(apiUpdateRequest)
+		if err != nil {
+			var aicError *providererror.AicErrorResponse
+			aicError, respBody = providererror.ReadErrorResponse(ctx, httpResp)
+			if isFailedCnameValidation(aicError) {
+				return retry.RetryableError(err)
+			}
+		} else {
+			resp.Diagnostics.Append(data.readClientResponse(responseData)...)
 		}
 		return err
 	})
 
-	if resp.Diagnostics.HasError() {
+	if finalErr != nil {
+		providererror.ReportHttpErrorBody(ctx, &resp.Diagnostics, "An error occurred while creating the customDomains", finalErr, respBody)
 		return
 	}
 
@@ -207,7 +201,7 @@ func (r *customDomainsResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	// Read response into the model
-	data.readClientResponseShouldRetry(ctx, responseData, httpResp, err, &resp.Diagnostics)
+	resp.Diagnostics.Append(data.readClientResponse(responseData)...)
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -234,18 +228,23 @@ func (r *customDomainsResource) Update(ctx context.Context, req resource.UpdateR
 
 	retries := retry.NewFibonacci(1 * time.Second)
 	retries = retry.WithMaxDuration(updateTimeout, retries)
-	var responseData *client.CustomDomains
-	var httpResp *http.Response
-	var err error
-	retry.Do(ctx, retries, func(ctx context.Context) error {
-		responseData, httpResp, err = r.apiClient.CustomDomainsAPI.SetCustomDomainsExecute(apiUpdateRequest)
-		if data.readClientResponseShouldRetry(ctx, responseData, httpResp, err, &resp.Diagnostics) {
-			return retry.RetryableError(err)
+	var respBody []byte
+	finalErr := retry.Do(ctx, retries, func(ctx context.Context) error {
+		responseData, httpResp, err := r.apiClient.CustomDomainsAPI.SetCustomDomainsExecute(apiUpdateRequest)
+		if err != nil {
+			var aicError *providererror.AicErrorResponse
+			aicError, respBody = providererror.ReadErrorResponse(ctx, httpResp)
+			if isFailedCnameValidation(aicError) {
+				return retry.RetryableError(err)
+			}
+		} else {
+			resp.Diagnostics.Append(data.readClientResponse(responseData)...)
 		}
 		return err
 	})
 
-	if resp.Diagnostics.HasError() {
+	if finalErr != nil {
+		providererror.ReportHttpErrorBody(ctx, &resp.Diagnostics, "An error occurred while updating the customDomains", finalErr, respBody)
 		return
 	}
 
