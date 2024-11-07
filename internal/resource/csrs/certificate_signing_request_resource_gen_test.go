@@ -83,6 +83,7 @@ func TestAccCertificateSigningRequest_MinimalMaximal(t *testing.T) {
 func certificateSigningRequest_MinimalHCL() string {
 	return `
 resource "identitycloud_certificate_signing_request_export" "example" {
+  common_name = "Ping"
 }
 `
 }
@@ -119,7 +120,7 @@ func certificateSigningRequest_CheckComputedValuesMinimal() resource.TestCheckFu
 		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request_export.example", "id"),
 		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request_export.example", "created_date"),
 		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request_export.example", "request"),
-		resource.TestCheckNoResourceAttr("identitycloud_certificate_signing_request_export.example", "subject"),
+		resource.TestCheckResourceAttr("identitycloud_certificate_signing_request_export.example", "subject", "CN=Ping"),
 		resource.TestCheckResourceAttr("identitycloud_certificate_signing_request_export.example", "subject_alternative_names.#", "0"),
 	)
 }
