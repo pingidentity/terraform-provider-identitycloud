@@ -268,7 +268,6 @@ func getCertificateId() resource.TestCheckFunc {
 		}
 
 		certificateId = v
-		println("Certificate id from get method: " + certificateId)
 		return nil
 	}
 }
