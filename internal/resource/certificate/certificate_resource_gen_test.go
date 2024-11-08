@@ -74,7 +74,10 @@ func TestAccCertificate_MinimalMaximal(t *testing.T) {
 			{
 				// Back to complete model
 				Config: certificate_CompleteHCL(),
-				Check:  certificate_CheckComputedValuesComplete(),
+				Check: resource.ComposeTestCheckFunc(
+					certificate_CheckComputedValuesComplete(),
+					getCertificateId(),
+				),
 			},
 		},
 	})
@@ -242,7 +245,12 @@ func certificate_CheckDestroy(s *terraform.State) error {
 	testClient := acctest.Client(nil)
 	certs, _, err := testClient.CertificatesAPI.GetCertificates(acctest.AuthContext()).Execute()
 	if err == nil && len(certs) > 0 {
-		return fmt.Errorf("certificate still exists after tests. Expected it to be destroyed")
+		// ensure the cert is not in the list
+		for _, cert := range certs {
+			if cert.Id != nil && *cert.Id == certificateId {
+				return fmt.Errorf("certificate still exists after tests. Expected it to be destroyed")
+			}
+		}
 	}
 	return err
 }
