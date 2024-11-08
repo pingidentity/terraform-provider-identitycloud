@@ -178,7 +178,8 @@ func (p *identityCloudProvider) Resources(_ context.Context) []func() resource.R
 		//TODO add certificate back when it is ready
 		//certificate.CertificateResource,
 		cookiedomains.CookieDomainsResource,
-		csrs.CertificateSigningRequestResource,
+		csrs.CertificateSigningRequestExportResource,
+		csrs.CertificateSigningRequestResponseResource,
 		customdomains.CustomDomainsResource,
 		customdomains.CustomDomainVerifyResource,
 		secrets.SecretResource,
