@@ -103,14 +103,14 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 		testOverrideUrl = os.Getenv("PINGAIC_TF_TEST_OVERRIDE_URL")
 		// Ensure the override URL matches the expected localhost format
 		if testOverrideUrl != "" && !testOverrideUrlRegex.MatchString(testOverrideUrl) {
-			resp.Diagnostics.AddError(providererror.InvalidProviderConfiguration,
+			resp.Diagnostics.AddError(providererror.InvalidProviderConfigurationError,
 				fmt.Sprintf("Invalid test override URL %s. If you do not intend to override the URL for testing, ensure the `PINGAIC_TF_TEST_OVERRIDE_URL` environment variable is not set.", testOverrideUrl))
 			return
 		}
 	}
 
 	if envFqdn == "" && testOverrideUrl == "" {
-		resp.Diagnostics.AddAttributeError(path.Root("tenant_environment_fqdn"), providererror.InvalidProviderConfiguration, "tenant_environment_fqdn provider attribute is required. If not set in the provider configuration, it can be set with the `PINGAIC_TF_TENANT_ENV_FQDN` environment variable.")
+		resp.Diagnostics.AddAttributeError(path.Root("tenant_environment_fqdn"), providererror.InvalidProviderConfigurationError, "tenant_environment_fqdn provider attribute is required. If not set in the provider configuration, it can be set with the `PINGAIC_TF_TENANT_ENV_FQDN` environment variable.")
 	}
 	// else {
 	// TODO validate the FQDN
@@ -125,7 +125,7 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 	}
 
 	if accessToken == "" {
-		resp.Diagnostics.AddAttributeError(path.Root("access_token"), providererror.InvalidProviderConfiguration, "access_token provider attribute is required. If not set in the provider configuration, it can be set with the `PINGAIC_TF_ACCESS_TOKEN` environment variable.")
+		resp.Diagnostics.AddAttributeError(path.Root("access_token"), providererror.InvalidProviderConfigurationError, "access_token provider attribute is required. If not set in the provider configuration, it can be set with the `PINGAIC_TF_ACCESS_TOKEN` environment variable.")
 	}
 
 	resourceConfig := internaltypes.ResourceConfiguration{

@@ -4,6 +4,8 @@ package secrets
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -14,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -57,17 +60,16 @@ func (r *secretVersionResource) Configure(_ context.Context, req resource.Config
 }
 
 type secretVersionResourceModel struct {
-	CreateDate  types.String `tfsdk:"create_date"`
-	Loaded      types.Bool   `tfsdk:"loaded"`
-	SecretId    types.String `tfsdk:"secret_id"`
-	Status      types.String `tfsdk:"status"`
-	ValueBase64 types.String `tfsdk:"value_base64"`
-	VersionId   types.String `tfsdk:"version_id"`
+	CreateDate types.String `tfsdk:"create_date"`
+	Loaded     types.Bool   `tfsdk:"loaded"`
+	SecretId   types.String `tfsdk:"secret_id"`
+	Status     types.String `tfsdk:"status"`
+	VersionId  types.String `tfsdk:"version_id"`
 }
 
 func (r *secretVersionResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Resource to create and manage a version of a secret.",
+		Description: "Resource to manage the status of a version of a secret.",
 		Attributes: map[string]schema.Attribute{
 			"create_date": schema.StringAttribute{
 				Description: "The date the secret version was created",
@@ -88,41 +90,29 @@ func (r *secretVersionResource) Schema(ctx context.Context, req resource.SchemaR
 				},
 			},
 			"status": schema.StringAttribute{
-				Optional: true,
-				Computed: true,
-				//TODO determine default status for secret versions
-				Description: "The status of the secret version. Either `DISABLED` or `ENABLED`.",
-			},
-			"value_base64": schema.StringAttribute{
-				Required:    true,
-				Description: "Base64 encoded value of the secret. Changing this value requires replacement of the resource.",
+				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString("ENABLED"),
+				Description: "The status of the secret version. Either `DISABLED`, `ENABLED`, or `DESTROYED`.",
 				Validators: []validator.String{
-					stringvalidator.RegexMatches(regexp.MustCompile("^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"), ""),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringvalidator.OneOf("DISABLED", "ENABLED", "DESTROYED"),
 				},
 			},
 			"version_id": schema.StringAttribute{
-				Computed:    true,
+				Required:    true,
 				Description: "ID of the secret version. Will match the pattern `^latest$|^[0-9]+$`.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
-					stringplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(regexp.MustCompile("^latest$|^[0-9]+$"), ""),
 				},
 			},
 		},
 	}
 }
 
-func (model *secretVersionResourceModel) buildClientStruct() (*client.EsvSecretVersionCreateRequest, diag.Diagnostics) {
-	result := &client.EsvSecretVersionCreateRequest{}
-	// value_base64
-	result.ValueBase64 = model.ValueBase64.ValueString()
-	return result, nil
-}
-
-func (model *secretVersionResourceModel) buildUpdateClientStruct() (*client.EsvSecretVersionStatusRequest, diag.Diagnostics) {
+func (model *secretVersionResourceModel) buildClientStruct() (*client.EsvSecretVersionStatusRequest, diag.Diagnostics) {
 	result := &client.EsvSecretVersionStatusRequest{}
 	// value_base64
 	result.Status = model.Status.ValueString()
@@ -151,22 +141,35 @@ func (r *secretVersionResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	// Create API call logic
-	clientData, diags := data.buildClientStruct()
-	resp.Diagnostics.Append(diags...)
-	apiCreateRequest := r.apiClient.SecretsAPI.CreateSecretVersion(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString())
-	apiCreateRequest = apiCreateRequest.Body(*clientData)
-	apiCreateRequest = apiCreateRequest.Action("create")
-	responseData, httpResp, err := r.apiClient.SecretsAPI.CreateSecretVersionExecute(apiCreateRequest)
-	if err != nil {
-		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while creating the secretVersion", err, httpResp)
-		return
+	var responseData *client.EsvSecretVersionResponse
+	var httpResp *http.Response
+	var err error
+	if data.Status.ValueString() == "DESTROYED" {
+		// Delete API call logic
+		apiUpdateRequest := r.apiClient.SecretsAPI.DeleteSecretVersion(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString(), data.VersionId.ValueString())
+		responseData, httpResp, err = r.apiClient.SecretsAPI.DeleteSecretVersionExecute(apiUpdateRequest)
+		if err != nil {
+			providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while updating the secretVersion", err, httpResp)
+			return
+		}
+	} else {
+		// Update API call logic
+		clientData, diags := data.buildClientStruct()
+		resp.Diagnostics.Append(diags...)
+		apiUpdateRequest := r.apiClient.SecretsAPI.ChangeSecretVersion(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString(), data.VersionId.ValueString())
+		apiUpdateRequest = apiUpdateRequest.Body(*clientData)
+		apiUpdateRequest = apiUpdateRequest.Action("changestatus")
+		responseData, httpResp, err = r.apiClient.SecretsAPI.ChangeSecretVersionExecute(apiUpdateRequest)
+		if err != nil {
+			providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while updating the secretVersion", err, httpResp)
+			return
+		}
 	}
 
 	// Read response into the model
 	resp.Diagnostics.Append(data.readClientResponse(responseData)...)
 
-	// Save data into Terraform state
+	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -209,16 +212,29 @@ func (r *secretVersionResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	// Update API call logic
-	clientData, diags := data.buildUpdateClientStruct()
-	resp.Diagnostics.Append(diags...)
-	apiUpdateRequest := r.apiClient.SecretsAPI.ChangeSecretVersion(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString(), data.VersionId.ValueString())
-	apiUpdateRequest = apiUpdateRequest.Body(*clientData)
-	apiUpdateRequest = apiUpdateRequest.Action("changestatus")
-	responseData, httpResp, err := r.apiClient.SecretsAPI.ChangeSecretVersionExecute(apiUpdateRequest)
-	if err != nil {
-		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while updating the secretVersion", err, httpResp)
-		return
+	var responseData *client.EsvSecretVersionResponse
+	var httpResp *http.Response
+	var err error
+	if data.Status.ValueString() == "DESTROYED" {
+		// Delete API call logic
+		apiUpdateRequest := r.apiClient.SecretsAPI.DeleteSecretVersion(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString(), data.VersionId.ValueString())
+		responseData, httpResp, err = r.apiClient.SecretsAPI.DeleteSecretVersionExecute(apiUpdateRequest)
+		if err != nil {
+			providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while updating the secretVersion", err, httpResp)
+			return
+		}
+	} else {
+		// Update API call logic
+		clientData, diags := data.buildClientStruct()
+		resp.Diagnostics.Append(diags...)
+		apiUpdateRequest := r.apiClient.SecretsAPI.ChangeSecretVersion(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString(), data.VersionId.ValueString())
+		apiUpdateRequest = apiUpdateRequest.Body(*clientData)
+		apiUpdateRequest = apiUpdateRequest.Action("changestatus")
+		responseData, httpResp, err = r.apiClient.SecretsAPI.ChangeSecretVersionExecute(apiUpdateRequest)
+		if err != nil {
+			providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while updating the secretVersion", err, httpResp)
+			return
+		}
 	}
 
 	// Read response into the model
@@ -238,11 +254,10 @@ func (r *secretVersionResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	// Delete API call logic
-	_, httpResp, err := r.apiClient.SecretsAPI.DeleteSecretVersion(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString(), data.VersionId.ValueString()).Execute()
-	if err != nil && (httpResp == nil || httpResp.StatusCode != 404) {
-		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while deleting the secretVersion", err, httpResp)
-	}
+	// This resource will just be removed from terraform state
+	resp.Diagnostics.AddWarning(providererror.DeletedNotRemovedWarning,
+		fmt.Sprintf("Secret version '%s' for secret '%s' still exists in the tenant, but has been removed from terraform state.",
+			data.VersionId.ValueString(), data.SecretId.ValueString()))
 }
 
 func (r *secretVersionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
