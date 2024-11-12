@@ -3,12 +3,8 @@
 package certificate_test
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
@@ -17,22 +13,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/acctest"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/provider"
-	"github.com/pingidentity/terraform-provider-identitycloud/internal/utils"
 )
 
-const certificateId = "certificateId"
-
-var certificateTestServerUrl *string
+var certificateId string
 
 func TestAccCertificate_RemovalDrift(t *testing.T) {
-	//TODO remove this skip when this test is ready
 	t.SkipNow()
-	if strings.ToLower(os.Getenv("PINGAIC_TF_TEST_MOCK_SERVICE")) == "true" {
-		testServer := certificate_MockHttpServer()
-		certificateTestServerUrl = utils.Pointer(testServer.URL)
-		os.Setenv("PINGAIC_TF_TEST_OVERRIDE_URL", testServer.URL)
-		defer testServer.Close()
-	}
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -43,6 +29,7 @@ func TestAccCertificate_RemovalDrift(t *testing.T) {
 			{
 				// Create the resource with a minimal model
 				Config: certificate_MinimalHCL(),
+				Check:  getCertificateId(),
 			},
 			{
 				// Delete the resource on the service, outside of terraform, verify that a non-empty plan is generated
@@ -57,14 +44,6 @@ func TestAccCertificate_RemovalDrift(t *testing.T) {
 }
 
 func TestAccCertificate_MinimalMaximal(t *testing.T) {
-	//TODO remove this skip when this test is ready
-	t.SkipNow()
-	if strings.ToLower(os.Getenv("PINGAIC_TF_TEST_MOCK_SERVICE")) == "true" {
-		testServer := certificate_MockHttpServer()
-		certificateTestServerUrl = utils.Pointer(testServer.URL)
-		os.Setenv("PINGAIC_TF_TEST_OVERRIDE_URL", testServer.URL)
-		defer testServer.Close()
-	}
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -95,19 +74,71 @@ func TestAccCertificate_MinimalMaximal(t *testing.T) {
 			{
 				// Back to complete model
 				Config: certificate_CompleteHCL(),
-				Check:  certificate_CheckComputedValuesComplete(),
+				Check: resource.ComposeTestCheckFunc(
+					certificate_CheckComputedValuesComplete(),
+					getCertificateId(),
+				),
 			},
 		},
 	})
 }
 
 // Minimal HCL with only required values set
-// TODO update with realistic cert and private key when testing with the real service
 func certificate_MinimalHCL() string {
 	return `
 resource "identitycloud_certificate" "example" {
-  certificate = "certexample"
-  private_key = "keyexample"
+  certificate = <<EOF
+-----BEGIN CERTIFICATE-----
+MIIDUTCCAjugAwIBAgIQPEkZGqCnSpsZf0jWCWxJ5jALBgkqhkiG9w0BAQswRzEL
+MAkGA1UEBgwCVVMxHDAaBgNVBAoME0V4YW1wbGUgQ29ycG9yYXRpb24xGjAYBgNV
+BAMMEUV4YW1wbGUgQXV0aG9yaXR5MB4XDTI0MDEwMTAwMDAwMFoXDTQzMTIyNzAw
+MDAwMFowRzELMAkGA1UEBgwCVVMxHDAaBgNVBAoME0V4YW1wbGUgQ29ycG9yYXRp
+b24xGjAYBgNVBAMMEUV4YW1wbGUgQXV0aG9yaXR5MIIBIjANBgkqhkiG9w0BAQEF
+AAOCAQ8AMIIBCgKCAQEAzdxT13IA0xJ8rB1hkqxa/JTTrmLnNjTRnVJdwagGKThQ
+xpWqh0DchNMqXTaFNGgxia3hPB53ew7nEMuIf+Qfq4meexKL3yRg86Ng56BrGbsu
+K6z4ptRpdnmsxgkpEfGytdmUFkPXAGE6j4Td/UrAWByz7C9yl7qzFYeorWq5nABc
+IiOlLxBYXX3fOu3a44SNexNgl5dDJAtn8mosQ19wJcjm08fKRqHeWYvBV99kQlhW
+a7WiTxdrbUZOrUMHYRuKO/JD732dcpnsar9HfjQi+PH3gCgw4NJNuBKzLv6t8DzZ
+nNxaiKgZ+5cxdhhRAe98MF0QeTbymjVLyoFBpMrRDQIDAQABoz0wOzAdBgNVHQ4E
+FgQUGNJsUqA63OVS8ouwVUkzaEP5vawwDAYDVR0TBAUwAwEB/zAMBgNVHQ8EBQMD
+BwYAMAsGCSqGSIb3DQEBCwOCAQEAGFvsWv35ipg0NNnq0x+e7Gtugn9OBhxkeTWo
+Q1IUR7CL9zMRdlErIx5waptJhlPZFZANVpuvYa+yRz7oz2txH8yf/0N+F0bTeNU/
+qZHenvp9RXzimxTFDoCkx7ESpW9b7IKSSZA6Zut6w7XzJeXRrNKfCSSrUGPfkCq4
+hOtAm9QzUVE7eJ5a7T3+O50gZdoxjdojPhh9h5E1b+bmexrfQKlVl/gL+KPacBJD
+bSxbiKECt5QGRdDGFFfoInhK1RiW7a/hQBhMWRsMiOFtu0YpfxfwIyIaK5QfHZBC
+CC7JaJKg19njrnkjfmiBGoev7XiYWYt/WvYAiZR4nJn/cFrW1A==
+-----END CERTIFICATE-----
+EOF
+  private_key = <<EOF
+-----BEGIN PRIVATE KEY-----
+MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDN3FPXcgDTEnys
+HWGSrFr8lNOuYuc2NNGdUl3BqAYpOFDGlaqHQNyE0ypdNoU0aDGJreE8Hnd7DucQ
+y4h/5B+riZ57EovfJGDzo2DnoGsZuy4rrPim1Gl2eazGCSkR8bK12ZQWQ9cAYTqP
+hN39SsBYHLPsL3KXurMVh6itarmcAFwiI6UvEFhdfd867drjhI17E2CXl0MkC2fy
+aixDX3AlyObTx8pGod5Zi8FX32RCWFZrtaJPF2ttRk6tQwdhG4o78kPvfZ1ymexq
+v0d+NCL48feAKDDg0k24ErMu/q3wPNmc3FqIqBn7lzF2GFEB73wwXRB5NvKaNUvK
+gUGkytENAgMBAAECggEATTPt9YR5rq7mNp4mM52T2dnusR3CXF/epMN5CeF7vgWy
+tWb3txWqHd4bqy2BMzBIM7wUFjnO0UW7fl72aBAjmG9aEgnYjuzTt0t0UimlQNcj
+75lE/zv1+UqUcwiIcIRWY0Cf+uGiRjAwiBZqMk3QaLsK9u6saR7Jfq+LoM2/ojMM
+KHLdsk8U7X4owktQtHn9uMPAb47XHR3Rk2Gd7/9qAHllobdVt29/WuAAGnBfoYAE
+KkehDfiiYnY502bIfP/JkJf+bVZpvTDZ18npCSiuHqxFtbkT8qJOEsQF0awMvJ4V
+kS9u7fa687ErRrS/vF/3MTxy1bPBUd8BLEoMRF/WuQKBgQDnrwWp05MIWtPneqX6
+kWC5+ZP5umhCgV9MQovlNoAXfvuV1ULgXapbKtOWQsDDT1yHn3P+sXB5u4P9GTP9
+hZL1E4domYwXVKgTWs4j4gGHTjUeYLMd3RIlyfLrxX/bZYoYYSLfpvPkgNsv2lQS
+7OtAf/ROxIiINm3sV5mvCMi9rwKBgQDjd3spB2en1KKx5dw6kNCqCwNGP7Q2vFPB
+A+QDafnNb1Voiw9oiZuYUp55AlMVAOcgHxsg3BvOT5K8eCipnh513WLuHKsktl0Z
+Z4/4xOfZ0IBZXMxcvaZGlUwKQ5VLpmVSWqYq+k9FI/LTN7uXwCbMH4dmNi96TxxF
+j/5gppboAwKBgBecf7BCDq8ASq5Bkp7JqBjr9Yey1qNIegTUl1tBxaYfW9Z2SH2D
+LjRiVfPvU6PT97Merfyb6sGNObNWmTTSIxr05YzkcSGDkCmAzJddlhhLASDabAa0
+HABb53TdyNz8KSm45Iv0gNCdzTjAQGc5W/RT1fsdDmkLWwKGHvR2qbajAoGAfpO9
+WE6DkvQTePVVQM3XH9izAMNwUEkqPi0hE/lEBdqfZ2aCs4RnrjLDdskhXH29H7XP
+jdCONJc5K2GeFw0jHCmO5LvVTL+iPQHRLvi7oAyTb6bhHfZ28a4gu1FyYb99gH9r
+Gl1iATKI7JqF7GMD8/DTksAyWVhufhMr1bK+JOsCgYA50RLvynoi+CX9B6nFkTNB
+8nE8TaIYnTlM+nLiMhOgeEOE342ZskS1+IgwX80O3FPnGwKZ4l2w+qxoRm9f1ttq
+O0+zW5XVp0cwpE8VgIRYekjVh31d0NHYabcE5NHL+tLF8RK1J7ZI/gij3yE35PLz
+02tA3Yd4yAolyH3i2TlwwQ==
+-----END PRIVATE KEY-----
+EOF
 }
 `
 }
@@ -117,24 +148,72 @@ func certificate_CompleteHCL() string {
 	return `
 resource "identitycloud_certificate" "example" {
   active = false
-  certificate = "certexample"
-  private_key = "keyexample"
+  certificate = <<EOF
+-----BEGIN CERTIFICATE-----
+MIIDUTCCAjugAwIBAgIQXEXXBBf3RzsV2XG0WgazKDALBgkqhkiG9w0BAQswRzEL
+MAkGA1UEBgwCVVMxHDAaBgNVBAoME0V4YW1wbGUgQ29ycG9yYXRpb24xGjAYBgNV
+BAMMEUV4YW1wbGUgQXV0aG9yaXR5MB4XDTI0MDEwMTAwMDAwMFoXDTQzMTIyNzAw
+MDAwMFowRzELMAkGA1UEBgwCVVMxHDAaBgNVBAoME0V4YW1wbGUgQ29ycG9yYXRp
+b24xGjAYBgNVBAMMEUV4YW1wbGUgQXV0aG9yaXR5MIIBIjANBgkqhkiG9w0BAQEF
+AAOCAQ8AMIIBCgKCAQEA/q1pjA0dT7cpHtEueYg/G2EW7xFwDL9qmJJ/HcKki1eW
+iZq+bOxQboAK3oacOCaEhaYoKOG7bTB8tfAHDMezv9dys8MCs5H6MD8LltqnkpqW
+DYZpXYd1Wg4PkbNgZpy9ps66C/xCHoRbS2E1EFBQGjDJGDXgKyLvVudKQELF/XtG
+zh+X+kVR9h1uxtCVfsGwz0xH7+XGMxK/nqBhpNdSM7H6apvQylXsuQw6Z0VzzbxG
+iP11puK0tpczsEyqCUQHEViAvnWs44oIb1CAIgyyTn4auzQtjnfogAYusEEJNu/I
+Kvi+lXt1VXPRsXlUBoFrfcfPxlnqhwv7eFdezgpCoQIDAQABoz0wOzAdBgNVHQ4E
+FgQU6zX1RXYFwSCJgrl7g0xw+sY+hrowDAYDVR0TBAUwAwEB/zAMBgNVHQ8EBQMD
+BwYAMAsGCSqGSIb3DQEBCwOCAQEAAJO2WLMQ6foP9SxDJ6Qw9dTVspLQ+HlSuo8/
+nzFx7z45hQMMJEfuAbrMl8N1IeKKSEjvIrf8WiaDnGMMaMfvN4NYq4kvB42pkANw
+hUCXFnvaz8hM4TrNCyA63xaGCmdwn83kN3DUU/k4TSZBn2GX/Yyk/YsWWQfxGWgi
+TZj8i9UjXO1+FcMWBAXdjC3VvNL2LIKbaVdywrgSjcBaM4WodxFBJQuhNhXX7VoK
+beWjS0KfL64oTHKfEiXaLLR/5QSSya79HbLRvSoblza001htL3ZZXLK7UPOONTgy
+r3ZSbjA2AG5BXFTpdNCQtfbOU34xZNc4aE0HzZD00+LHSUT58Q==
+-----END CERTIFICATE-----
+EOF
+  private_key = <<EOF
+-----BEGIN PRIVATE KEY-----
+MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQD+rWmMDR1Ptyke
+0S55iD8bYRbvEXAMv2qYkn8dwqSLV5aJmr5s7FBugArehpw4JoSFpigo4bttMHy1
+8AcMx7O/13KzwwKzkfowPwuW2qeSmpYNhmldh3VaDg+Rs2BmnL2mzroL/EIehFtL
+YTUQUFAaMMkYNeArIu9W50pAQsX9e0bOH5f6RVH2HW7G0JV+wbDPTEfv5cYzEr+e
+oGGk11Izsfpqm9DKVey5DDpnRXPNvEaI/XWm4rS2lzOwTKoJRAcRWIC+dazjighv
+UIAiDLJOfhq7NC2Od+iABi6wQQk278gq+L6Ve3VVc9GxeVQGgWt9x8/GWeqHC/t4
+V17OCkKhAgMBAAECggEBAL3b13iR+k0INb6EoUn22Vz251r4O/k05imx5NPx3CsI
+8+/Hjbiz/04xZGj6HxH5HQhpkzzO86P15rLXqtnLMuSMoDUE50mpRMOc7G3cudog
+JkcU8g3IwyKMouyyteYpaXUmXio7N6t6bnjmkeGEjgLIZdIHsANYeublbEQ1w1Yw
+iSY0+BWNUvP12RHPXM+DOD++WsLnNa4imBTLhvxZ3WHaoR9w3GiR8+aoSeKOQuhb
+VFDcL0T+V2Pd2Fqajp/MEpzodmOg6OF59IpebPaRI6PbjcdOcsF9Oqsbyrs+E56p
+uFMxtPYYl5ne4OGRuGKgr2V6Imk1sg/QS00vfLIPWAECgYEA/2IzbrsVy4IVE1xa
+qGCL1rF5N0U/hVSk7J8RAzKHZvVYAUvZ+71VyjsQbsqEaIWHvK0lcw7uyLhsDOFw
+EuMBJ5Nzib+dkwKoLN8n+vdOqy6VcyGDrAhWdsRILJMC7e+j/jr+lUZskeVnf03N
+1DFgccaEVJxYPXYRXmV3X1VBXmECgYEA/0rGaC8xEtNUYCzlbPAZob3sPq5WoGoa
+uwo687PMvLXlombBz+Mostr6bMiYNUE0IauCaZHvMYzDQuQT+UXiiEE3ovRDciFL
+ti5KMcv9pJcvqS75kwp2Hkm/lL58xmqW5Vo2rhX+eUmrYca24AnQf126ij4MU7xh
+fadK/AK8zEECgYEAhSA4tWk69EoMGHqVG56wZqs/B+vGMAeurVZB9Qu6/5W3WX2j
+1RGejfv6FfblzOKGnnkXw4GuQd25HYHK/V1uNaYsnUrQpljFOBbf7XhLfvqal1iK
+Hfx+rgylnu7HoSbBsv4nxcLfR7JxIDB7sjhHESgtxTl22hsY9L8p2f1ERSECgYEA
+/SRPUtWgqpMk8mzyXjBCqlAiJxFGUrCDqv388NRT6rfPaVbNTe9o1tkuQpox23S5
+Vb20hiwv64kxwW1ZpO64LvXETnA5RL1hTtfduD0XWJKVrwQmc7iG4YetUbgFD9Z3
+pBrtZ3flqqzzJPQfOE5jETiGlTfrj0iXvzoYr4WjYkECgYBVIFVFZQagqkMdsij6
+GSZFPd7fCBPuRMviZ02Lkj5UBlqIS1bbrVsvXjVoN2Q1dFKypSVhbUQImx9Dc/M2
+9eEYMH7j60zM/gS2S9Z/FMnDBGeE7c46g/nwVr96fm1okGdbtCzHrdZqzfuCK0vD
+YGmHH1z8Lhy03vY5Y5bFXrD0zg==
+-----END PRIVATE KEY-----
+EOF
 }
 `
 }
 
 // Validate any computed values when applying minimal HCL
-// TODO verify expected values with real service
 func certificate_CheckComputedValuesMinimal() resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
-		resource.TestCheckResourceAttr("identitycloud_certificate.example", "id", certificateId),
-		resource.TestCheckResourceAttr("identitycloud_certificate.example", "active", "true"),
-		resource.TestCheckResourceAttr("identitycloud_certificate.example", "expire_time", "2029-01-01T00:00:00Z"),
-		resource.TestCheckResourceAttr("identitycloud_certificate.example", "issuer", "cn=example"),
+		resource.TestCheckResourceAttrSet("identitycloud_certificate.example", "id"),
+		resource.TestCheckResourceAttr("identitycloud_certificate.example", "active", "false"),
+		resource.TestCheckResourceAttr("identitycloud_certificate.example", "expire_time", "2043-12-27T00:00:00Z"),
+		resource.TestCheckResourceAttr("identitycloud_certificate.example", "issuer", "CN=Example Authority,O=Example Corporation,C=US"),
 		resource.TestCheckResourceAttr("identitycloud_certificate.example", "live", "false"),
-		resource.TestCheckResourceAttr("identitycloud_certificate.example", "subject", "cn=subject"),
-		resource.TestCheckResourceAttr("identitycloud_certificate.example", "subject_alternative_names.#", "1"),
-		resource.TestCheckResourceAttr("identitycloud_certificate.example", "subject_alternative_names.0", "cn=altsubject"),
+		resource.TestCheckResourceAttr("identitycloud_certificate.example", "subject", "CN=Example Authority,O=Example Corporation,C=US"),
+		resource.TestCheckNoResourceAttr("identitycloud_certificate.example", "subject_alternative_names"),
 		resource.TestCheckResourceAttr("identitycloud_certificate.example", "valid_from_time", "2024-01-01T00:00:00Z"),
 	)
 }
@@ -142,20 +221,19 @@ func certificate_CheckComputedValuesMinimal() resource.TestCheckFunc {
 // Validate any computed values when applying complete HCL
 func certificate_CheckComputedValuesComplete() resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
-		resource.TestCheckResourceAttr("identitycloud_certificate.example", "id", certificateId),
-		resource.TestCheckResourceAttr("identitycloud_certificate.example", "expire_time", "2029-01-01T00:00:00Z"),
-		resource.TestCheckResourceAttr("identitycloud_certificate.example", "issuer", "cn=example"),
+		resource.TestCheckResourceAttrSet("identitycloud_certificate.example", "id"),
+		resource.TestCheckResourceAttr("identitycloud_certificate.example", "expire_time", "2043-12-27T00:00:00Z"),
+		resource.TestCheckResourceAttr("identitycloud_certificate.example", "issuer", "CN=Example Authority,O=Example Corporation,C=US"),
 		resource.TestCheckResourceAttr("identitycloud_certificate.example", "live", "false"),
-		resource.TestCheckResourceAttr("identitycloud_certificate.example", "subject", "cn=subject"),
-		resource.TestCheckResourceAttr("identitycloud_certificate.example", "subject_alternative_names.#", "1"),
-		resource.TestCheckResourceAttr("identitycloud_certificate.example", "subject_alternative_names.0", "cn=altsubject"),
+		resource.TestCheckResourceAttr("identitycloud_certificate.example", "subject", "CN=Example Authority,O=Example Corporation,C=US"),
+		resource.TestCheckNoResourceAttr("identitycloud_certificate.example", "subject_alternative_names"),
 		resource.TestCheckResourceAttr("identitycloud_certificate.example", "valid_from_time", "2024-01-01T00:00:00Z"),
 	)
 }
 
 // Delete the resource
 func certificate_Delete(t *testing.T) {
-	testClient := acctest.Client(certificateTestServerUrl)
+	testClient := acctest.Client(nil)
 	_, err := testClient.CertificatesAPI.DeleteCertificateByID(acctest.AuthContext(), certificateId).Execute()
 	if err != nil {
 		t.Fatalf("Failed to delete config: %v", err)
@@ -164,90 +242,40 @@ func certificate_Delete(t *testing.T) {
 
 // Test that any objects created by the test are destroyed
 func certificate_CheckDestroy(s *terraform.State) error {
-	testClient := acctest.Client(certificateTestServerUrl)
-	_, err := testClient.CertificatesAPI.DeleteCertificateByID(acctest.AuthContext(), certificateId).Execute()
-	if err == nil {
-		return fmt.Errorf("certificate still exists after tests. Expected it to be destroyed")
-	}
-	return nil
-}
-
-type certificate struct {
-	Active                  bool     `json:"active"`
-	Certificate             string   `json:"certificate"`
-	PrivateKey              string   `json:"privateKey"`
-	ExpireTime              string   `json:"expireTime"`
-	Id                      string   `json:"id"`
-	Issuer                  string   `json:"issuer"`
-	Live                    bool     `json:"live"`
-	Subject                 string   `json:"subject"`
-	SubjectAlternativeNames []string `json:"subjectAlternativeNames"`
-	ValidFromTime           string   `json:"validFromTime"`
-}
-type certificatePatch struct {
-	Active bool `json:"active"`
-}
-
-var testCerts = map[string]certificate{}
-
-// Mocking the AIC service for testing
-func certificate_MockHttpServer() *httptest.Server {
-	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var out []byte
-		switch r.Method {
-		case http.MethodPost:
-			var inputCert certificate
-			err := json.NewDecoder(r.Body).Decode(&inputCert)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
+	testClient := acctest.Client(nil)
+	certs, _, err := testClient.CertificatesAPI.GetCertificates(acctest.AuthContext()).Execute()
+	if err == nil && len(certs) > 0 {
+		// ensure the cert is not in the list
+		for _, cert := range certs {
+			if cert.Id != nil && *cert.Id == certificateId {
+				return fmt.Errorf("certificate still exists after tests. Expected it to be destroyed")
 			}
-			inputCert.ExpireTime = "2029-01-01T00:00:00Z"
-			inputCert.Id = certificateId
-			inputCert.Issuer = "cn=example"
-			inputCert.Live = false
-			inputCert.Subject = "cn=subject"
-			inputCert.SubjectAlternativeNames = []string{"cn=altsubject"}
-			inputCert.ValidFromTime = "2024-01-01T00:00:00Z"
-			testCerts[certificateId] = inputCert
-			out, _ = json.Marshal(inputCert)
-		case http.MethodGet:
-			certId := strings.Split(r.URL.String(), "/")[3]
-			storedCert, ok := testCerts[certId]
-			if !ok {
-				http.Error(w, "cert not found", http.StatusNotFound)
-				return
-			}
-			out, _ = json.Marshal(storedCert)
-		case http.MethodPatch:
-			certId := strings.Split(r.URL.String(), "/")[3]
-			storedCert, ok := testCerts[certId]
-			if !ok {
-				http.Error(w, "cert not found", http.StatusNotFound)
-				return
-			}
-			var certPatch certificatePatch
-			err := json.NewDecoder(r.Body).Decode(&certPatch)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			storedCert.Active = certPatch.Active
-			testCerts[certificateId] = storedCert
-			out, _ = json.Marshal(storedCert)
-		case http.MethodDelete:
-			certId := strings.Split(r.URL.String(), "/")[3]
-			storedCert, ok := testCerts[certId]
-			if !ok {
-				http.Error(w, "cert not found", http.StatusNotFound)
-				return
-			}
-			delete(testCerts, certId)
-			out, _ = json.Marshal(storedCert)
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Content-API-Version", "1.0")
-		w.WriteHeader(http.StatusOK)
-		w.Write(out)
-	}))
+	}
+	return err
+}
+
+// Get the certificate id from terraform state
+func getCertificateId() resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		ms := s.RootModule()
+		rs, ok := ms.Resources["identitycloud_certificate.example"]
+		if !ok {
+			return errors.New("Not found: identitycloud_certificate.example")
+		}
+
+		is := rs.Primary
+		if is == nil {
+			return errors.New("No primary instance found")
+		}
+
+		v, ok := is.Attributes["id"]
+
+		if !ok {
+			return errors.New("No id attribute found")
+		}
+
+		certificateId = v
+		return nil
+	}
 }

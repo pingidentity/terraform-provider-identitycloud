@@ -14,26 +14,26 @@ import (
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/provider"
 )
 
-const certificateSigningRequestId = "certificateSigningRequestId"
+const certificateSigningRequestExportId = "certificateSigningRequestExportId"
 
-var certificateSigningRequestTestServerUrl *string
+var certificateSigningRequestExportTestServerUrl *string
 
-func TestAccCertificateSigningRequest_RemovalDrift(t *testing.T) {
+func TestAccCertificateSigningRequestExport_RemovalDrift(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
 			"identitycloud": providerserver.NewProtocol6WithError(provider.NewTestProvider()),
 		},
-		CheckDestroy: certificateSigningRequest_CheckDestroy,
+		CheckDestroy: certificateSigningRequestExport_CheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				// Create the resource with a minimal model
-				Config: certificateSigningRequest_MinimalHCL(),
+				Config: certificateSigningRequestExport_MinimalHCL(),
 			},
 			{
 				// Delete the resource on the service, outside of terraform, verify that a non-empty plan is generated
 				PreConfig: func() {
-					certificateSigningRequest_Delete(t)
+					certificateSigningRequestExport_Delete(t)
 				},
 				RefreshState:       true,
 				ExpectNonEmptyPlan: true,
@@ -42,45 +42,45 @@ func TestAccCertificateSigningRequest_RemovalDrift(t *testing.T) {
 	})
 }
 
-func TestAccCertificateSigningRequest_MinimalMaximal(t *testing.T) {
+func TestAccCertificateSigningRequestExport_MinimalMaximal(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
 			"identitycloud": providerserver.NewProtocol6WithError(provider.NewTestProvider()),
 		},
-		CheckDestroy: certificateSigningRequest_CheckDestroy,
+		CheckDestroy: certificateSigningRequestExport_CheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				// Create the resource with a minimal model
-				Config: certificateSigningRequest_MinimalHCL(),
-				Check:  certificateSigningRequest_CheckComputedValuesMinimal(),
+				Config: certificateSigningRequestExport_MinimalHCL(),
+				Check:  certificateSigningRequestExport_CheckComputedValuesMinimal(),
 			},
 			{
 				// Delete the minimal model
-				Config:  certificateSigningRequest_MinimalHCL(),
+				Config:  certificateSigningRequestExport_MinimalHCL(),
 				Destroy: true,
 			},
 			{
 				// Re-create with a complete model
-				Config: certificateSigningRequest_CompleteHCL(),
-				Check:  certificateSigningRequest_CheckComputedValuesComplete(),
+				Config: certificateSigningRequestExport_CompleteHCL(),
+				Check:  certificateSigningRequestExport_CheckComputedValuesComplete(),
 			},
 			{
 				// Back to minimal model
-				Config: certificateSigningRequest_MinimalHCL(),
-				Check:  certificateSigningRequest_CheckComputedValuesMinimal(),
+				Config: certificateSigningRequestExport_MinimalHCL(),
+				Check:  certificateSigningRequestExport_CheckComputedValuesMinimal(),
 			},
 			{
 				// Back to complete model
-				Config: certificateSigningRequest_CompleteHCL(),
-				Check:  certificateSigningRequest_CheckComputedValuesComplete(),
+				Config: certificateSigningRequestExport_CompleteHCL(),
+				Check:  certificateSigningRequestExport_CheckComputedValuesComplete(),
 			},
 		},
 	})
 }
 
 // Minimal HCL with only required values set
-func certificateSigningRequest_MinimalHCL() string {
+func certificateSigningRequestExport_MinimalHCL() string {
 	return `
 resource "identitycloud_certificate_signing_request_export" "example" {
   common_name = "Ping"
@@ -89,7 +89,7 @@ resource "identitycloud_certificate_signing_request_export" "example" {
 }
 
 // Maximal HCL with all values set where possible
-func certificateSigningRequest_CompleteHCL() string {
+func certificateSigningRequestExport_CompleteHCL() string {
 	return `
 resource "identitycloud_certificate_signing_request_export" "example" {
   algorithm = "ecdsa"
@@ -113,7 +113,7 @@ resource "identitycloud_certificate_signing_request_export" "example" {
 }
 
 // Validate any computed values when applying minimal HCL
-func certificateSigningRequest_CheckComputedValuesMinimal() resource.TestCheckFunc {
+func certificateSigningRequestExport_CheckComputedValuesMinimal() resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
 		resource.TestCheckResourceAttr("identitycloud_certificate_signing_request_export.example", "algorithm", "rsa"),
 		resource.TestCheckNoResourceAttr("identitycloud_certificate_signing_request_export.example", "certificate_id"),
@@ -126,7 +126,7 @@ func certificateSigningRequest_CheckComputedValuesMinimal() resource.TestCheckFu
 }
 
 // Validate any computed values when applying complete HCL
-func certificateSigningRequest_CheckComputedValuesComplete() resource.TestCheckFunc {
+func certificateSigningRequestExport_CheckComputedValuesComplete() resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
 		resource.TestCheckNoResourceAttr("identitycloud_certificate_signing_request_export.example", "certificate_id"),
 		resource.TestCheckResourceAttrSet("identitycloud_certificate_signing_request_export.example", "id"),
@@ -137,18 +137,18 @@ func certificateSigningRequest_CheckComputedValuesComplete() resource.TestCheckF
 }
 
 // Delete the resource
-func certificateSigningRequest_Delete(t *testing.T) {
-	testClient := acctest.Client(certificateSigningRequestTestServerUrl)
-	_, err := testClient.CSRsAPI.DeleteCertificateSigningRequestById(acctest.AuthContext(), certificateSigningRequestId).Execute()
+func certificateSigningRequestExport_Delete(t *testing.T) {
+	testClient := acctest.Client(certificateSigningRequestExportTestServerUrl)
+	_, err := testClient.CSRsAPI.DeleteCertificateSigningRequestById(acctest.AuthContext(), certificateSigningRequestExportId).Execute()
 	if err != nil {
 		t.Fatalf("Failed to delete config: %v", err)
 	}
 }
 
 // Test that any objects created by the test are destroyed
-func certificateSigningRequest_CheckDestroy(s *terraform.State) error {
-	testClient := acctest.Client(certificateSigningRequestTestServerUrl)
-	_, _, err := testClient.CSRsAPI.GetCertificateSigningRequestById(acctest.AuthContext(), certificateSigningRequestId).Execute()
+func certificateSigningRequestExport_CheckDestroy(s *terraform.State) error {
+	testClient := acctest.Client(certificateSigningRequestExportTestServerUrl)
+	_, _, err := testClient.CSRsAPI.GetCertificateSigningRequestById(acctest.AuthContext(), certificateSigningRequestExportId).Execute()
 	if err == nil {
 		return fmt.Errorf("certificate_signing_request_export still exists after tests. Expected it to be destroyed")
 	}

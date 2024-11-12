@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	client "github.com/pingidentity/identitycloud-go-client/identitycloud"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/providererror"
+	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/certificate"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/cookiedomains"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/csrs"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/customdomains"
@@ -176,10 +177,10 @@ func (p *identityCloudProvider) DataSources(_ context.Context) []func() datasour
 // Resources defines the resources implemented in the provider.
 func (p *identityCloudProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		//TODO add certificate back when it is ready
-		//certificate.CertificateResource,
+		certificate.CertificateResource,
 		cookiedomains.CookieDomainsResource,
-		csrs.CertificateSigningRequestResource,
+		csrs.CertificateSigningRequestExportResource,
+		csrs.CertificateSigningRequestResponseResource,
 		customdomains.CustomDomainsResource,
 		customdomains.CustomDomainVerifyResource,
 		secrets.SecretResource,
