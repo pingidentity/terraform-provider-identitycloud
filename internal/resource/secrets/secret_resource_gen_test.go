@@ -120,7 +120,7 @@ func secret_CheckComputedValuesMinimal() resource.TestCheckFunc {
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "description", ""),
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "id", secretSecretId),
 		resource.TestCheckResourceAttrSet("identitycloud_secret.example", "last_change_date"),
-		resource.TestCheckResourceAttr("identitycloud_secret.example", "last_changed_by", "tiered-tf-testing"),
+		resource.TestCheckResourceAttr("identitycloud_secret.example", "last_changed_by", "tf-provider-testing"),
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "loaded", "true"),
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "loaded_version", "1"),
 	)
@@ -132,7 +132,7 @@ func secret_CheckComputedValuesComplete() resource.TestCheckFunc {
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "active_version", "1"),
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "id", secretSecretId),
 		resource.TestCheckResourceAttrSet("identitycloud_secret.example", "last_change_date"),
-		resource.TestCheckResourceAttr("identitycloud_secret.example", "last_changed_by", "tiered-tf-testing"),
+		resource.TestCheckResourceAttr("identitycloud_secret.example", "last_changed_by", "tf-provider-testing"),
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "loaded", "true"),
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "loaded_version", "1"),
 	)

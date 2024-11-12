@@ -116,7 +116,7 @@ func variable_CheckComputedValuesMinimal() resource.TestCheckFunc {
 		resource.TestCheckResourceAttr("identitycloud_variable.example", "expression_type", "string"),
 		resource.TestCheckResourceAttr("identitycloud_variable.example", "id", variableVariableId),
 		resource.TestCheckResourceAttrSet("identitycloud_variable.example", "last_change_date"),
-		resource.TestCheckResourceAttr("identitycloud_variable.example", "last_changed_by", "tiered-tf-testing"),
+		resource.TestCheckResourceAttr("identitycloud_variable.example", "last_changed_by", "tf-provider-testing"),
 		resource.TestCheckResourceAttr("identitycloud_variable.example", "loaded", "false"),
 	)
 }
@@ -126,7 +126,7 @@ func variable_CheckComputedValuesComplete() resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
 		resource.TestCheckResourceAttr("identitycloud_variable.example", "id", variableVariableId),
 		resource.TestCheckResourceAttrSet("identitycloud_variable.example", "last_change_date"),
-		resource.TestCheckResourceAttr("identitycloud_variable.example", "last_changed_by", "tiered-tf-testing"),
+		resource.TestCheckResourceAttr("identitycloud_variable.example", "last_changed_by", "tf-provider-testing"),
 		resource.TestCheckResourceAttr("identitycloud_variable.example", "loaded", "false"),
 	)
 }
