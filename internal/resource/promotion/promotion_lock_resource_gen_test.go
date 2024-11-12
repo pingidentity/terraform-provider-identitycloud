@@ -27,7 +27,7 @@ func TestAccPromotionLock_MinimalMaximal(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				// Create the resource with a minimal model
-				Config: promotionLock_MinimalHCL(),
+				Config: promotionLock_MinimalHCL(true),
 				Check: resource.ComposeTestCheckFunc(
 					promotionLock_CheckComputedValuesMinimal(),
 					getPromotionId(),
@@ -35,7 +35,7 @@ func TestAccPromotionLock_MinimalMaximal(t *testing.T) {
 			},
 			{
 				// Test importing the resource
-				Config:                               promotionLock_MinimalHCL(),
+				Config:                               promotionLock_MinimalHCL(false),
 				ResourceName:                         "identitycloud_promotion_lock.example",
 				ImportStateVerifyIdentifierAttribute: "id",
 				ImportState:                          true,
@@ -48,15 +48,24 @@ func TestAccPromotionLock_MinimalMaximal(t *testing.T) {
 }
 
 // Minimal HCL with only required values set
-func promotionLock_MinimalHCL() string {
-	return `
+func promotionLock_MinimalHCL(includeDataSource bool) string {
+	result := `
 resource "identitycloud_promotion_lock" "example" {
   retry_timeouts = {
     create = "10m"
 	delete = "10m"
   }
 }
+
 `
+	if includeDataSource {
+		result += `
+data "identitycloud_promotion_lock" "example" {
+  depends_on = [identitycloud_promotion_lock.example]
+}
+`
+	}
+	return result
 }
 
 // Validate any computed values when applying minimal HCL
@@ -72,6 +81,16 @@ func promotionLock_CheckComputedValuesMinimal() resource.TestCheckFunc {
 		resource.TestCheckResourceAttrSet("identitycloud_promotion_lock.example", "upper_env.promotion_id"),
 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "upper_env.proxy_state", "locked"),
 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "upper_env.state", "locking"),
+		resource.TestCheckResourceAttr("data.identitycloud_promotion_lock.example", "description", "Environment lock in progress"),
+		resource.TestCheckResourceAttrSet("data.identitycloud_promotion_lock.example", "lower_env.promotion_id"),
+		resource.TestCheckResourceAttr("data.identitycloud_promotion_lock.example", "lower_env.proxy_state", "locked"),
+		resource.TestCheckResourceAttr("data.identitycloud_promotion_lock.example", "lower_env.state", "locking"),
+		resource.TestCheckResourceAttrSet("data.identitycloud_promotion_lock.example", "promotion_id"),
+		resource.TestCheckResourceAttrSet("data.identitycloud_promotion_lock.example", "id"),
+		resource.TestCheckResourceAttr("data.identitycloud_promotion_lock.example", "result", "locking"),
+		resource.TestCheckResourceAttrSet("data.identitycloud_promotion_lock.example", "upper_env.promotion_id"),
+		resource.TestCheckResourceAttr("data.identitycloud_promotion_lock.example", "upper_env.proxy_state", "locked"),
+		resource.TestCheckResourceAttr("data.identitycloud_promotion_lock.example", "upper_env.state", "locking"),
 	)
 }
 

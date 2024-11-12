@@ -272,9 +272,21 @@ func (r *promotionLockResource) Read(ctx context.Context, req resource.ReadReque
 }
 
 func (r *promotionLockResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// This resource can't be updated after creation - all editable attributes should have RequiresReplace,
-	// so this method will never be called
-	resp.State.Raw = req.State.Raw
+	// Only the timeouts attribute can be updated
+	var plan, data promotionLockResourceModel
+
+	// Read Terraform prior state data into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	data.RetryTimeouts = plan.RetryTimeouts
+
+	// Save updated data into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *promotionLockResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
