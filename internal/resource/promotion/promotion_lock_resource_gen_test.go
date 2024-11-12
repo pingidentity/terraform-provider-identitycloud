@@ -96,7 +96,7 @@ func promotionLock_CheckComputedValuesMinimal() resource.TestCheckFunc {
 
 // Test that any objects created by the test are destroyed
 func promotionLock_CheckDestroy(s *terraform.State) error {
-	testClient := acctest.Client(nil)
+	testClient := acctest.Client()
 	_, _, err := testClient.PromotionAPI.Unlock(acctest.AuthContext(), promotionId).Execute()
 	if err == nil {
 		return fmt.Errorf("promotion_lock still exists after tests. Expected it to be destroyed")
