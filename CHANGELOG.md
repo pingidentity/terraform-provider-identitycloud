@@ -7,3 +7,7 @@
 * **New Resource:** `identitycloud_certificate_signing_request_export` ([#14](https://github.com/pingidentity/terraform-provider-pingfederate/pull/14))
 * **New Resource:** `identitycloud_custom_domain_verify` ([#15](https://github.com/pingidentity/terraform-provider-pingfederate/pull/15))
 * **New Resource:** `identitycloud_secret` ([#16](https://github.com/pingidentity/terraform-provider-pingfederate/pull/16))
+* **New Resource:** `identitycloud_certificate_signing_request_response` ([#19](https://github.com/pingidentity/terraform-provider-pingfederate/pull/19))
+* **New Resource:** `identitycloud_sso_cookie` ([#20](https://github.com/pingidentity/terraform-provider-pingfederate/pull/20))
+* **New Resource:** `identitycloud_content_security_policy_enforced` ([#23](https://github.com/pingidentity/terraform-provider-pingfederate/pull/23))
+* **New Resource:** `identitycloud_content_security_policy_report_only` ([#23](https://github.com/pingidentity/terraform-provider-pingfederate/pull/23))

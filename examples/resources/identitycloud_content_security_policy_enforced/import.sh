@@ -1,0 +1,1 @@
+terraform import identitycloud_content_security_policy_enforced.example id
