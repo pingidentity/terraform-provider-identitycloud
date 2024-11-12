@@ -4,7 +4,10 @@ package promotion
 
 import (
 	"context"
+	"net/http"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -14,6 +17,7 @@ import (
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/auth"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/providererror"
 	internaltypes "github.com/pingidentity/terraform-provider-identitycloud/internal/types"
+	"github.com/sethvargo/go-retry"
 )
 
 var (
@@ -50,11 +54,13 @@ func (r *promotionLockResource) Configure(_ context.Context, req resource.Config
 }
 
 type promotionLockResourceModel struct {
-	Description types.String `tfsdk:"description"`
-	LowerEnv    types.Object `tfsdk:"lower_env"`
-	PromotionId types.String `tfsdk:"promotion_id"`
-	Result      types.String `tfsdk:"result"`
-	UpperEnv    types.Object `tfsdk:"upper_env"`
+	Description   types.String   `tfsdk:"description"`
+	LowerEnv      types.Object   `tfsdk:"lower_env"`
+	PromotionId   types.String   `tfsdk:"promotion_id"`
+	Id            types.String   `tfsdk:"id"`
+	Result        types.String   `tfsdk:"result"`
+	UpperEnv      types.Object   `tfsdk:"upper_env"`
+	RetryTimeouts timeouts.Value `tfsdk:"retry_timeouts"`
 }
 
 func (r *promotionLockResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -63,7 +69,7 @@ func (r *promotionLockResource) Schema(ctx context.Context, req resource.SchemaR
 		Attributes: map[string]schema.Attribute{
 			"description": schema.StringAttribute{
 				Computed:    true,
-				Description: "Error description, if applicable.",
+				Description: "Description of the state of the lock.",
 			},
 			"lower_env": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
@@ -72,16 +78,22 @@ func (r *promotionLockResource) Schema(ctx context.Context, req resource.SchemaR
 						Description: "Promotion unique identifier.",
 					},
 					"proxy_state": schema.StringAttribute{
-						Computed: true,
+						Computed:    true,
+						Description: "Proxy state of the lock.",
 					},
 					"state": schema.StringAttribute{
-						Computed: true,
+						Computed:    true,
+						Description: "State of the lock.",
 					},
 				},
 				Computed:    true,
 				Description: "Lower environment lock status.",
 			},
 			"promotion_id": schema.StringAttribute{
+				Computed:    true,
+				Description: "Promotion unique identifier.",
+			},
+			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "Promotion unique identifier.",
 			},
@@ -96,15 +108,23 @@ func (r *promotionLockResource) Schema(ctx context.Context, req resource.SchemaR
 						Description: "Promotion unique identifier.",
 					},
 					"proxy_state": schema.StringAttribute{
-						Computed: true,
+						Computed:    true,
+						Description: "Proxy state of the lock.",
 					},
 					"state": schema.StringAttribute{
-						Computed: true,
+						Computed:    true,
+						Description: "State of the lock.",
 					},
 				},
 				Computed:    true,
 				Description: "Upper environment lock status.",
 			},
+			"retry_timeouts": timeouts.Attributes(ctx, timeouts.Opts{
+				Create:            true,
+				CreateDescription: "A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as \"30s\" or \"2h45m\", as a grace period for retries on locking of the environment. Valid time units are \"s\" (seconds), \"m\" (minutes), \"h\" (hours). The default is 1 minute.",
+				Delete:            true,
+				DeleteDescription: "A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as \"30s\" or \"2h45m\", as a grace period for retries on unlocking of the environment. Valid time units are \"s\" (seconds), \"m\" (minutes), \"h\" (hours). The default is 1 minute.",
+			}),
 		},
 	}
 }
@@ -134,6 +154,8 @@ func (state *promotionLockResourceModel) readClientResponse(response *client.Pro
 	state.LowerEnv = lowerEnvValue
 	// promotion_id
 	state.PromotionId = types.StringPointerValue(response.PromotionId)
+	// id
+	state.Id = types.StringPointerValue(response.PromotionId)
 	// result
 	state.Result = types.StringPointerValue(response.Result)
 	// upper_env
@@ -158,26 +180,61 @@ func (state *promotionLockResourceModel) readClientResponse(response *client.Pro
 	return respDiags
 }
 
+// Set all non-primitive attributes to null with appropriate attribute types
+func (r *promotionLockResource) emptyModel() promotionLockResourceModel {
+	var model promotionLockResourceModel
+	envAttrTypes := map[string]attr.Type{
+		"promotion_id": types.StringType,
+		"proxy_state":  types.StringType,
+		"state":        types.StringType,
+	}
+	model.LowerEnv = types.ObjectNull(envAttrTypes)
+	model.UpperEnv = types.ObjectNull(envAttrTypes)
+	model.RetryTimeouts = timeouts.Value{
+		Object: types.ObjectNull(map[string]attr.Type{
+			"create": types.StringType,
+			"delete": types.StringType,
+		}),
+	}
+	return model
+}
+
 func (r *promotionLockResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data promotionLockResourceModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	// Retry up to the timeout on create
+	createTimeout, diags := data.RetryTimeouts.Create(ctx, 1*time.Minute)
+	resp.Diagnostics.Append(diags...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Create API call logic
+	// Lock API call logic
 	apiCreateRequest := r.apiClient.PromotionAPI.Lock(auth.AuthContext(ctx, r.accessToken))
-	_, httpResp, err := r.apiClient.PromotionAPI.LockExecute(apiCreateRequest)
-	if err != nil {
+	apiCreateRequest = apiCreateRequest.AcceptAPIVersion("protocol=1.0,resource=1.0")
+
+	retries := retry.NewFibonacci(1 * time.Second)
+	retries = retry.WithMaxDuration(createTimeout, retries)
+	var httpResp *http.Response
+	var err error
+	finalErr := retry.Do(ctx, retries, func(ctx context.Context) error {
+		_, httpResp, err = r.apiClient.PromotionAPI.LockExecute(apiCreateRequest)
+		if err != nil && httpResp != nil && httpResp.StatusCode == 409 {
+			return retry.RetryableError(err)
+		}
+		return err
+	})
+
+	if finalErr != nil {
 		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while locking the environment", err, httpResp)
 		return
 	}
 
 	// Read the lock status after creating the lock
-	responseData, httpResp, err := r.apiClient.PromotionAPI.CheckLock(auth.AuthContext(ctx, r.accessToken)).Execute()
+	responseData, httpResp, err := r.apiClient.PromotionAPI.CheckLock(auth.AuthContext(ctx, r.accessToken)).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
 	if err != nil {
 		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while reading the promotionLock", err, httpResp)
 		return
@@ -201,7 +258,7 @@ func (r *promotionLockResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	// Read API call logic
-	responseData, httpResp, err := r.apiClient.PromotionAPI.CheckLock(auth.AuthContext(ctx, r.accessToken)).Execute()
+	responseData, httpResp, err := r.apiClient.PromotionAPI.CheckLock(auth.AuthContext(ctx, r.accessToken)).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
 	if err != nil {
 		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while reading the promotionLock", err, httpResp)
 		return
@@ -217,6 +274,7 @@ func (r *promotionLockResource) Read(ctx context.Context, req resource.ReadReque
 func (r *promotionLockResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// This resource can't be updated after creation - all editable attributes should have RequiresReplace,
 	// so this method will never be called
+	resp.State.Raw = req.State.Raw
 }
 
 func (r *promotionLockResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -224,20 +282,34 @@ func (r *promotionLockResource) Delete(ctx context.Context, req resource.DeleteR
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	// Retry up to the timeout on delete
+	deleteTimeout, diags := data.RetryTimeouts.Delete(ctx, 1*time.Minute)
+	resp.Diagnostics.Append(diags...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Delete API call logic
-	_, httpResp, err := r.apiClient.PromotionAPI.Unlock(auth.AuthContext(ctx, r.accessToken), data.PromotionId.ValueString()).Execute()
-	if err != nil && (httpResp == nil || httpResp.StatusCode != 404) {
+	// Unlock API call logic
+	retries := retry.NewFibonacci(1 * time.Second)
+	retries = retry.WithMaxDuration(deleteTimeout, retries)
+	var httpResp *http.Response
+	var err error
+	finalErr := retry.Do(ctx, retries, func(ctx context.Context) error {
+		_, httpResp, err = r.apiClient.PromotionAPI.Unlock(auth.AuthContext(ctx, r.accessToken), data.PromotionId.ValueString()).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
+		if err != nil && httpResp != nil && httpResp.StatusCode == 409 {
+			return retry.RetryableError(err)
+		}
+		return err
+	})
+
+	if finalErr != nil && (httpResp == nil || httpResp.StatusCode != 404) {
 		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while unlocking the environment", err, httpResp)
 	}
 }
 
 func (r *promotionLockResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// This resource has no identifier attributes, so the value passed in here doesn't matter. Just return an empty state struct.
-	var emptyState promotionLockResourceModel
+	emptyState := r.emptyModel()
 	resp.Diagnostics.Append(resp.State.Set(ctx, &emptyState)...)
 }

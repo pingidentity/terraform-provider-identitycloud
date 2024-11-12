@@ -2,146 +2,110 @@
 
 package promotion_test
 
-// func TestAccPromotionLock_RemovalDrift(t *testing.T) {
-// 	resource.Test(t, resource.TestCase{
-// 		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
-// 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-// 			"identitycloud": providerserver.NewProtocol6WithError(provider.NewTestProvider()),
-// 		},
-// 		CheckDestroy: promotionLock_CheckDestroy,
-// 		Steps: []resource.TestStep{
-// 			{
-// 				// Create the resource with a minimal model
-// 				Config: promotionLock_MinimalHCL(),
-// 			},
-// 			{
-// 				// Delete the resource on the service, outside of terraform, verify that a non-empty plan is generated
-// 				PreConfig: func() {
-// 					promotionLock_Delete(t)
-// 				},
-// 				RefreshState:       true,
-// 				ExpectNonEmptyPlan: true,
-// 			},
-// 		},
-// 	})
-// }
+import (
+	"errors"
+	"fmt"
+	"testing"
 
-// func TestAccPromotionLock_MinimalMaximal(t *testing.T) {
-// 	resource.Test(t, resource.TestCase{
-// 		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
-// 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-// 			"identitycloud": providerserver.NewProtocol6WithError(provider.NewTestProvider()),
-// 		},
-// 		CheckDestroy: promotionLock_CheckDestroy,
-// 		Steps: []resource.TestStep{
-// 			{
-// 				// Create the resource with a minimal model
-// 				Config: promotionLock_MinimalHCL(),
-// 				Check:  promotionLock_CheckComputedValuesMinimal(),
-// 			},
-// 			{
-// 				// Delete the minimal model
-// 				Config:  promotionLock_MinimalHCL(),
-// 				Destroy: true,
-// 			},
-// 			{
-// 				// Re-create with a complete model
-// 				Config: promotionLock_CompleteHCL(),
-// 				Check:  promotionLock_CheckComputedValuesComplete(),
-// 			},
-// 			{
-// 				// Back to minimal model
-// 				Config: promotionLock_MinimalHCL(),
-// 				Check:  promotionLock_CheckComputedValuesMinimal(),
-// 			},
-// 			{
-// 				// Back to complete model
-// 				Config: promotionLock_CompleteHCL(),
-// 				Check:  promotionLock_CheckComputedValuesComplete(),
-// 			},
-// 			{
-// 				// Test importing the resource
-// 				Config:                               promotionLock_CompleteHCL(),
-// 				ResourceName:                         "identitycloud_promotion_lock.example",
-// 				ImportStateVerifyIdentifierAttribute: "description",
-// 				ImportState:                          true,
-// 				ImportStateVerify:                    true,
-// 			},
-// 		},
-// 	})
-// }
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/pingidentity/terraform-provider-identitycloud/internal/acctest"
+	"github.com/pingidentity/terraform-provider-identitycloud/internal/provider"
+)
 
-// // Minimal HCL with only required values set
-// func promotionLock_MinimalHCL() string {
-// 	return fmt.Sprintf(`
-// resource "identitycloud_promotion_lock" "example" {
-//   // TODO set values for minimal fields
-// }
-// `)
-// }
+var promotionId string
 
-// // Maximal HCL with all values set where possible
-// func promotionLock_CompleteHCL() string {
-// 	return fmt.Sprintf(`
-// resource "identitycloud_promotion_lock" "example" {
-//   // TODO set values for complete fields
-//   local_lock_only = //TODO
-// }
-// `)
-// }
+func TestAccPromotionLock_MinimalMaximal(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"identitycloud": providerserver.NewProtocol6WithError(provider.NewTestProvider()),
+		},
+		CheckDestroy: promotionLock_CheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Create the resource with a minimal model
+				Config: promotionLock_MinimalHCL(),
+				Check: resource.ComposeTestCheckFunc(
+					promotionLock_CheckComputedValuesMinimal(),
+					getPromotionId(),
+				),
+			},
+			{
+				// Test importing the resource
+				Config:                               promotionLock_MinimalHCL(),
+				ResourceName:                         "identitycloud_promotion_lock.example",
+				ImportStateVerifyIdentifierAttribute: "id",
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				// Timeouts aren't read from the API
+				ImportStateVerifyIgnore: []string{"retry_timeouts"},
+			},
+		},
+	})
+}
 
-// // Validate any computed values when applying minimal HCL
-// // TODO remove any values that are not computed from this check
-// // TODO set expected values
-// func promotionLock_CheckComputedValuesMinimal() resource.TestCheckFunc {
-// 	return resource.ComposeTestCheckFunc(
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "description", "expected_value"),
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "local_lock_only", "expected_value"),
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "lower_env.promotion_id", "expected_value"),
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "lower_env.proxy_state", "expected_value"),
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "lower_env.state", "expected_value"),
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "promotion_id", "expected_value"),
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "result", "expected_value"),
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "upper_env.promotion_id", "expected_value"),
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "upper_env.proxy_state", "expected_value"),
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "upper_env.state", "expected_value"),
-// 	)
-// }
+// Minimal HCL with only required values set
+func promotionLock_MinimalHCL() string {
+	return `
+resource "identitycloud_promotion_lock" "example" {
+  retry_timeouts = {
+    create = "10m"
+	delete = "10m"
+  }
+}
+`
+}
 
-// // Validate any computed values when applying complete HCL
-// // TODO This may not be needed as a separate function from minimal HCL if the expected values match
-// // TODO remove any values that are not computed from this check
-// // TODO set expected values
-// func promotionLock_CheckComputedValuesComplete() resource.TestCheckFunc {
-// 	return resource.ComposeTestCheckFunc(
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "description", "expected_value"),
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "local_lock_only", "expected_value"),
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "lower_env.promotion_id", "expected_value"),
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "lower_env.proxy_state", "expected_value"),
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "lower_env.state", "expected_value"),
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "promotion_id", "expected_value"),
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "result", "expected_value"),
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "upper_env.promotion_id", "expected_value"),
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "upper_env.proxy_state", "expected_value"),
-// 		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "upper_env.state", "expected_value"),
-// 	)
-// }
+// Validate any computed values when applying minimal HCL
+func promotionLock_CheckComputedValuesMinimal() resource.TestCheckFunc {
+	return resource.ComposeTestCheckFunc(
+		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "description", "Environment lock in progress"),
+		resource.TestCheckResourceAttrSet("identitycloud_promotion_lock.example", "lower_env.promotion_id"),
+		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "lower_env.proxy_state", "locked"),
+		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "lower_env.state", "locking"),
+		resource.TestCheckResourceAttrSet("identitycloud_promotion_lock.example", "promotion_id"),
+		resource.TestCheckResourceAttrSet("identitycloud_promotion_lock.example", "id"),
+		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "result", "locking"),
+		resource.TestCheckResourceAttrSet("identitycloud_promotion_lock.example", "upper_env.promotion_id"),
+		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "upper_env.proxy_state", "locked"),
+		resource.TestCheckResourceAttr("identitycloud_promotion_lock.example", "upper_env.state", "locking"),
+	)
+}
 
-// // Delete the resource
-// func promotionLock_Delete(t *testing.T) {
-// 	testClient := acctest.Client()
-// 	_, _, err := testClient.PromotionAPI.Unlock(acctest.AuthContext()).Execute()
-// 	if err != nil {
-// 		t.Fatalf("Failed to delete config: %v", err)
-// 	}
-// }
+// Test that any objects created by the test are destroyed
+func promotionLock_CheckDestroy(s *terraform.State) error {
+	testClient := acctest.Client(nil)
+	_, _, err := testClient.PromotionAPI.Unlock(acctest.AuthContext(), promotionId).Execute()
+	if err == nil {
+		return fmt.Errorf("promotion_lock still exists after tests. Expected it to be destroyed")
+	}
+	return nil
+}
 
-// // Test that any objects created by the test are destroyed
-// func promotionLock_CheckDestroy(s *terraform.State) error {
-// 	testClient := acctest.Client()
-// 	_, _, err := testClient.PromotionAPI.Unlock(acctest.AuthContext()).Execute()
-// 	if err == nil {
-// 		return fmt.Errorf("promotion_lock still exists after tests. Expected it to be destroyed")
-// 	}
-// 	return nil
-// }
+// Get the promotion id from terraform state
+func getPromotionId() resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		ms := s.RootModule()
+		rs, ok := ms.Resources["identitycloud_promotion_lock.example"]
+		if !ok {
+			return errors.New("Not found: identitycloud_promotion_lock.example")
+		}
+
+		is := rs.Primary
+		if is == nil {
+			return errors.New("No primary instance found")
+		}
+
+		v, ok := is.Attributes["id"]
+
+		if !ok {
+			return errors.New("No id attribute found")
+		}
+
+		promotionId = v
+		return nil
+	}
+}
