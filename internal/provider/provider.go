@@ -18,6 +18,7 @@ import (
 	client "github.com/pingidentity/identitycloud-go-client/identitycloud"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/providererror"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/certificate"
+	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/contentsecuritypolicy"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/cookiedomains"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/csrs"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/customdomains"
@@ -179,6 +180,8 @@ func (p *identityCloudProvider) Resources(_ context.Context) []func() resource.R
 	return []func() resource.Resource{
 		certificate.CertificateResource,
 		cookiedomains.CookieDomainsResource,
+		contentsecuritypolicy.ContentSecurityPolicyEnforcedResource,
+		contentsecuritypolicy.ContentSecurityPolicyReportOnlyResource,
 		csrs.CertificateSigningRequestExportResource,
 		csrs.CertificateSigningRequestResponseResource,
 		customdomains.CustomDomainsResource,

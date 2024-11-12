@@ -1,0 +1,1 @@
+terraform import identitycloud_content_security_policy_report_only.example id
