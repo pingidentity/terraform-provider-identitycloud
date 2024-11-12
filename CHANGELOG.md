@@ -11,3 +11,7 @@
 * **New Resource:** `identitycloud_sso_cookie` ([#20](https://github.com/pingidentity/terraform-provider-pingfederate/pull/20))
 * **New Resource:** `identitycloud_content_security_policy_enforced` ([#23](https://github.com/pingidentity/terraform-provider-pingfederate/pull/23))
 * **New Resource:** `identitycloud_content_security_policy_report_only` ([#23](https://github.com/pingidentity/terraform-provider-pingfederate/pull/23))
+* **New Resource:** `identitycloud_promotion_lock` ([#24](https://github.com/pingidentity/terraform-provider-pingfederate/pull/24))
+
+### Data sources
+* **New Data Source:** `identitycloud_promotion_lock` ([#24](https://github.com/pingidentity/terraform-provider-pingfederate/pull/24))

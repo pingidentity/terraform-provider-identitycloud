@@ -20,6 +20,7 @@ import (
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/cookiedomains"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/csrs"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/customdomains"
+	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/promotion"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/secrets"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/ssocookie"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/variable"
@@ -142,7 +143,9 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 
 // DataSources defines the data sources implemented in the provider.
 func (p *identityCloudProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{}
+	return []func() datasource.DataSource{
+		promotion.PromotionLockDataSource,
+	}
 }
 
 // Resources defines the resources implemented in the provider.
@@ -156,6 +159,7 @@ func (p *identityCloudProvider) Resources(_ context.Context) []func() resource.R
 		csrs.CertificateSigningRequestResponseResource,
 		customdomains.CustomDomainsResource,
 		customdomains.CustomDomainVerifyResource,
+		promotion.PromotionLockResource,
 		secrets.SecretResource,
 		ssocookie.SsoCookieResource,
 		variable.VariableResource,

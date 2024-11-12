@@ -20,7 +20,10 @@ vet:
 	go vet ./...
 
 testacc:
-	TF_ACC=1 go test ./internal/resource/... -timeout 10m -v -count=1
+	TF_ACC=1 go test `go list ./internal/... | grep -v -e promotion` -timeout 10m -v -p 4
+
+testaccpromotion:
+	TF_ACC=1 go test `go list ./internal/... | grep -e promotion` -timeout 10m -v -p 4
 
 testaccfolder:
 	TF_ACC=1 go test ./internal/resource/${ACC_TEST_FOLDER}... -timeout 10m -v -count=1
