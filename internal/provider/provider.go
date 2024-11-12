@@ -2,11 +2,9 @@ package provider
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"os"
-	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -17,11 +15,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	client "github.com/pingidentity/identitycloud-go-client/identitycloud"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/providererror"
+	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/certificate"
+	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/contentsecuritypolicy"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/cookiedomains"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/csrs"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/customdomains"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/promotion"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/secrets"
+	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/ssocookie"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/resource/variable"
 	internaltypes "github.com/pingidentity/terraform-provider-identitycloud/internal/types"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/utils"
@@ -30,8 +31,6 @@ import (
 // Ensure the implementation satisfies the expected interfacesß
 var (
 	_ provider.Provider = &identityCloudProvider{}
-
-	testOverrideUrlRegex = regexp.MustCompile(`^https://127.0.0.1:\d{5}$`)
 )
 
 // New is a helper function to simplify provider server and testing implementation.
@@ -98,19 +97,7 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 		envFqdn = os.Getenv("PINGAIC_TF_TENANT_ENV_FQDN")
 	}
 
-	// Tests can override the URL
-	var testOverrideUrl string
-	if p.version == "test" {
-		testOverrideUrl = os.Getenv("PINGAIC_TF_TEST_OVERRIDE_URL")
-		// Ensure the override URL matches the expected localhost format
-		if testOverrideUrl != "" && !testOverrideUrlRegex.MatchString(testOverrideUrl) {
-			resp.Diagnostics.AddError(providererror.InvalidProviderConfiguration,
-				fmt.Sprintf("Invalid test override URL %s. If you do not intend to override the URL for testing, ensure the `PINGAIC_TF_TEST_OVERRIDE_URL` environment variable is not set.", testOverrideUrl))
-			return
-		}
-	}
-
-	if envFqdn == "" && testOverrideUrl == "" {
+	if envFqdn == "" {
 		resp.Diagnostics.AddAttributeError(path.Root("tenant_environment_fqdn"), providererror.InvalidProviderConfiguration, "tenant_environment_fqdn provider attribute is required. If not set in the provider configuration, it can be set with the `PINGAIC_TF_TENANT_ENV_FQDN` environment variable.")
 	}
 	// else {
@@ -133,26 +120,12 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 		AccessToken: accessToken,
 	}
 	clientConfig := client.NewConfiguration()
-	url := fmt.Sprintf("https://%s", envFqdn)
-	if testOverrideUrl != "" && p.version == "test" {
-		url = testOverrideUrl
-	}
 	clientConfig.Servers = client.ServerConfigurations{
 		{
-			URL: url,
+			URL: fmt.Sprintf("https://%s", envFqdn),
 		},
 	}
 	httpClient := &http.Client{}
-	if testOverrideUrl != "" && p.version == "test" {
-		// This will only be used for tests that mock the service. The test override URL and the provider test version are verified above.
-		// #nosec G402
-		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
-		httpClient.Transport = tr
-	}
 	clientConfig.HTTPClient = httpClient
 	userAgentSuffix := fmt.Sprintf("terraform-provider-identitycloud/%s", p.version)
 	// The extra suffix for the user-agent is optional and is not considered a provider parameter.
@@ -178,14 +151,17 @@ func (p *identityCloudProvider) DataSources(_ context.Context) []func() datasour
 // Resources defines the resources implemented in the provider.
 func (p *identityCloudProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		//TODO add certificate back when it is ready
-		//certificate.CertificateResource,
+		certificate.CertificateResource,
 		cookiedomains.CookieDomainsResource,
-		csrs.CertificateSigningRequestResource,
+		contentsecuritypolicy.ContentSecurityPolicyEnforcedResource,
+		contentsecuritypolicy.ContentSecurityPolicyReportOnlyResource,
+		csrs.CertificateSigningRequestExportResource,
+		csrs.CertificateSigningRequestResponseResource,
 		customdomains.CustomDomainsResource,
 		customdomains.CustomDomainVerifyResource,
 		promotion.PromotionLockResource,
 		secrets.SecretResource,
+		ssocookie.SsoCookieResource,
 		variable.VariableResource,
 	}
 }
