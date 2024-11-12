@@ -16,8 +16,6 @@ import (
 
 const certificateSigningRequestExportId = "certificateSigningRequestExportId"
 
-var certificateSigningRequestExportTestServerUrl *string
-
 func TestAccCertificateSigningRequestExport_RemovalDrift(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
@@ -138,7 +136,7 @@ func certificateSigningRequestExport_CheckComputedValuesComplete() resource.Test
 
 // Delete the resource
 func certificateSigningRequestExport_Delete(t *testing.T) {
-	testClient := acctest.Client(certificateSigningRequestExportTestServerUrl)
+	testClient := acctest.Client()
 	_, err := testClient.CSRsAPI.DeleteCertificateSigningRequestById(acctest.AuthContext(), certificateSigningRequestExportId).Execute()
 	if err != nil {
 		t.Fatalf("Failed to delete config: %v", err)
@@ -147,7 +145,7 @@ func certificateSigningRequestExport_Delete(t *testing.T) {
 
 // Test that any objects created by the test are destroyed
 func certificateSigningRequestExport_CheckDestroy(s *terraform.State) error {
-	testClient := acctest.Client(certificateSigningRequestExportTestServerUrl)
+	testClient := acctest.Client()
 	_, _, err := testClient.CSRsAPI.GetCertificateSigningRequestById(acctest.AuthContext(), certificateSigningRequestExportId).Execute()
 	if err == nil {
 		return fmt.Errorf("certificate_signing_request_export still exists after tests. Expected it to be destroyed")

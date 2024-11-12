@@ -3,12 +3,8 @@
 package customdomains_test
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
@@ -16,20 +12,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/acctest"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/provider"
-	"github.com/pingidentity/terraform-provider-identitycloud/internal/utils"
 )
 
 const customDomainsRealm = "alpha"
 
-var customDomainsTestServerUrl *string
-
 func TestAccCustomDomains_MinimalMaximal(t *testing.T) {
-	if strings.ToLower(os.Getenv("PINGAIC_TF_TEST_MOCK_SERVICE")) == "true" {
-		testServer := customDomains_MockHttpServer()
-		customDomainsTestServerUrl = utils.Pointer(testServer.URL)
-		os.Setenv("PINGAIC_TF_TEST_OVERRIDE_URL", testServer.URL)
-		defer testServer.Close()
-	}
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -89,36 +76,4 @@ resource "identitycloud_custom_domains" "example" {
 // Validate any computed values when applying minimal HCL
 func customDomains_CheckComputedValuesMinimal() resource.TestCheckFunc {
 	return resource.TestCheckResourceAttr("identitycloud_custom_domains.example", "domains.#", "0")
-}
-
-// Mocking the AIC service for testing
-type domains struct {
-	Domains []string `json:"domains"`
-}
-
-var testDomains = domains{
-	Domains: []string{},
-}
-
-func customDomains_MockHttpServer() *httptest.Server {
-	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var out []byte
-		switch r.Method {
-		case http.MethodGet:
-			out, _ = json.Marshal(testDomains)
-		case http.MethodPut:
-			var inputDomains domains
-			err := json.NewDecoder(r.Body).Decode(&inputDomains)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			testDomains.Domains = inputDomains.Domains
-			out, _ = json.Marshal(testDomains)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Content-API-Version", "1.0")
-		w.WriteHeader(http.StatusOK)
-		w.Write(out)
-	}))
 }

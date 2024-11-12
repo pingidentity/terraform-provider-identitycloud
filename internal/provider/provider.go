@@ -2,11 +2,9 @@ package provider
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"os"
-	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -32,8 +30,6 @@ import (
 // Ensure the implementation satisfies the expected interfacesß
 var (
 	_ provider.Provider = &identityCloudProvider{}
-
-	testOverrideUrlRegex = regexp.MustCompile(`^https://127.0.0.1:\d{5}$`)
 )
 
 // New is a helper function to simplify provider server and testing implementation.
@@ -100,19 +96,7 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 		envFqdn = os.Getenv("PINGAIC_TF_TENANT_ENV_FQDN")
 	}
 
-	// Tests can override the URL
-	var testOverrideUrl string
-	if p.version == "test" {
-		testOverrideUrl = os.Getenv("PINGAIC_TF_TEST_OVERRIDE_URL")
-		// Ensure the override URL matches the expected localhost format
-		if testOverrideUrl != "" && !testOverrideUrlRegex.MatchString(testOverrideUrl) {
-			resp.Diagnostics.AddError(providererror.InvalidProviderConfiguration,
-				fmt.Sprintf("Invalid test override URL %s. If you do not intend to override the URL for testing, ensure the `PINGAIC_TF_TEST_OVERRIDE_URL` environment variable is not set.", testOverrideUrl))
-			return
-		}
-	}
-
-	if envFqdn == "" && testOverrideUrl == "" {
+	if envFqdn == "" {
 		resp.Diagnostics.AddAttributeError(path.Root("tenant_environment_fqdn"), providererror.InvalidProviderConfiguration, "tenant_environment_fqdn provider attribute is required. If not set in the provider configuration, it can be set with the `PINGAIC_TF_TENANT_ENV_FQDN` environment variable.")
 	}
 	// else {
@@ -135,26 +119,12 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 		AccessToken: accessToken,
 	}
 	clientConfig := client.NewConfiguration()
-	url := fmt.Sprintf("https://%s", envFqdn)
-	if testOverrideUrl != "" && p.version == "test" {
-		url = testOverrideUrl
-	}
 	clientConfig.Servers = client.ServerConfigurations{
 		{
-			URL: url,
+			URL: fmt.Sprintf("https://%s", envFqdn),
 		},
 	}
 	httpClient := &http.Client{}
-	if testOverrideUrl != "" && p.version == "test" {
-		// This will only be used for tests that mock the service. The test override URL and the provider test version are verified above.
-		// #nosec G402
-		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
-		httpClient.Transport = tr
-	}
 	clientConfig.HTTPClient = httpClient
 	userAgentSuffix := fmt.Sprintf("terraform-provider-identitycloud/%s", p.version)
 	// The extra suffix for the user-agent is optional and is not considered a provider parameter.
