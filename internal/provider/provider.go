@@ -161,11 +161,8 @@ func (p *identityCloudProvider) Resources(_ context.Context) []func() resource.R
 		customdomains.CustomDomainVerifyResource,
 		promotion.PromotionLockResource,
 		secrets.SecretResource,
-<<<<<<< HEAD
 		secrets.SecretVersionResource,
-=======
 		ssocookie.SsoCookieResource,
->>>>>>> main
 		variable.VariableResource,
 	}
 }
