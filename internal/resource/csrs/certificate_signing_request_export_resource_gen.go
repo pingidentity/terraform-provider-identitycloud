@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -23,24 +24,24 @@ import (
 )
 
 var (
-	_ resource.Resource              = &certificateSigningRequestResource{}
-	_ resource.ResourceWithConfigure = &certificateSigningRequestResource{}
+	_ resource.Resource              = &certificateSigningRequestExportResource{}
+	_ resource.ResourceWithConfigure = &certificateSigningRequestExportResource{}
 )
 
-func CertificateSigningRequestResource() resource.Resource {
-	return &certificateSigningRequestResource{}
+func CertificateSigningRequestExportResource() resource.Resource {
+	return &certificateSigningRequestExportResource{}
 }
 
-type certificateSigningRequestResource struct {
+type certificateSigningRequestExportResource struct {
 	apiClient   *client.APIClient
 	accessToken string
 }
 
-func (r *certificateSigningRequestResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *certificateSigningRequestExportResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_certificate_signing_request_export"
 }
 
-func (r *certificateSigningRequestResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *certificateSigningRequestExportResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -54,7 +55,7 @@ func (r *certificateSigningRequestResource) Configure(_ context.Context, req res
 	r.accessToken = resourceConfig.AccessToken
 }
 
-type certificateSigningRequestResourceModel struct {
+type certificateSigningRequestExportResourceModel struct {
 	Algorithm               types.String `tfsdk:"algorithm"`
 	BusinessCategory        types.String `tfsdk:"business_category"`
 	CertificateId           types.String `tfsdk:"certificate_id"`
@@ -78,7 +79,7 @@ type certificateSigningRequestResourceModel struct {
 	SubjectAlternativeNames types.Set    `tfsdk:"subject_alternative_names"`
 }
 
-func (r *certificateSigningRequestResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *certificateSigningRequestExportResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Resource to create and manage a certificate signing request.",
 		Attributes: map[string]schema.Attribute{
@@ -117,9 +118,12 @@ func (r *certificateSigningRequestResource) Schema(ctx context.Context, req reso
 			},
 			"common_name": schema.StringAttribute{
 				Optional:    true,
-				Description: "Domain name that the SSL certificate is securing",
+				Description: "Domain name that the SSL certificate is securing. At least one of `common_name` or `subject_alternative_names` must be specified.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.AtLeastOneOf(path.MatchRelative().AtParent().AtMapKey("subject_alternative_names")),
 				},
 			},
 			"country": schema.StringAttribute{
@@ -224,7 +228,7 @@ func (r *certificateSigningRequestResource) Schema(ctx context.Context, req reso
 			"subject_alternative_names": schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Description: "Additional domain or domains that the SSL certificate is securing.",
+				Description: "Additional domain or domains that the SSL certificate is securing. At least one of `common_name` or `subject_alternative_names` must be specified.",
 				PlanModifiers: []planmodifier.Set{
 					setplanmodifier.RequiresReplace(),
 				},
@@ -233,7 +237,7 @@ func (r *certificateSigningRequestResource) Schema(ctx context.Context, req reso
 	}
 }
 
-func (model *certificateSigningRequestResourceModel) buildClientStruct() (*client.CreateCertificateSigningRequestRequest, diag.Diagnostics) {
+func (model *certificateSigningRequestExportResourceModel) buildClientStruct() (*client.CreateCertificateSigningRequestRequest, diag.Diagnostics) {
 	result := &client.CreateCertificateSigningRequestRequest{}
 	// algorithm
 	result.Algorithm = model.Algorithm.ValueStringPointer()
@@ -276,7 +280,7 @@ func (model *certificateSigningRequestResourceModel) buildClientStruct() (*clien
 	return result, nil
 }
 
-func (state *certificateSigningRequestResourceModel) readClientResponse(response *client.CertificateSigningRequest) diag.Diagnostics {
+func (state *certificateSigningRequestExportResourceModel) readClientResponse(response *client.CertificateSigningRequest) diag.Diagnostics {
 	var respDiags, diags diag.Diagnostics
 	// certificate_id
 	state.CertificateId = types.StringPointerValue(response.CertificateID)
@@ -294,8 +298,8 @@ func (state *certificateSigningRequestResourceModel) readClientResponse(response
 	return respDiags
 }
 
-func (r *certificateSigningRequestResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data certificateSigningRequestResourceModel
+func (r *certificateSigningRequestExportResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data certificateSigningRequestExportResourceModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -322,8 +326,8 @@ func (r *certificateSigningRequestResource) Create(ctx context.Context, req reso
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *certificateSigningRequestResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data certificateSigningRequestResourceModel
+func (r *certificateSigningRequestExportResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var data certificateSigningRequestExportResourceModel
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
@@ -351,13 +355,13 @@ func (r *certificateSigningRequestResource) Read(ctx context.Context, req resour
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *certificateSigningRequestResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *certificateSigningRequestExportResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// This resource can't be updated after creation - all editable attributes should have RequiresReplace,
 	// so this method will never be called
 }
 
-func (r *certificateSigningRequestResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data certificateSigningRequestResourceModel
+func (r *certificateSigningRequestExportResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data certificateSigningRequestExportResourceModel
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)

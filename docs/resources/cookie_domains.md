@@ -28,7 +28,7 @@ resource "identitycloud_cookie_domains" "example" {
 
 Import is supported using the following syntax:
 
-~> This resource is singleton, so the value of "id" doesn't matter - it is just a placeholder, and required by Terraform
+~> realm_id should be either `alpha` or `bravo`.
 
 ```shell
 terraform import identitycloud_cookie_domains.example id

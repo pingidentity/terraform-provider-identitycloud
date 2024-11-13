@@ -3,12 +3,7 @@
 package variable_test
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
@@ -17,20 +12,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/acctest"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/provider"
-	"github.com/pingidentity/terraform-provider-identitycloud/internal/utils"
 )
 
 const variableVariableId = "esv-variable1234"
 
-var testServerUrl *string
-
 func TestAccVariable_RemovalDrift(t *testing.T) {
-	if strings.ToLower(os.Getenv("PINGAIC_TF_TEST_MOCK_SERVICE")) == "true" {
-		testServer := mockVariableHttpServer()
-		testServerUrl = utils.Pointer(testServer.URL)
-		os.Setenv("PINGAIC_TF_TEST_OVERRIDE_URL", testServer.URL)
-		defer testServer.Close()
-	}
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -55,12 +41,6 @@ func TestAccVariable_RemovalDrift(t *testing.T) {
 }
 
 func TestAccVariable_MinimalMaximal(t *testing.T) {
-	if strings.ToLower(os.Getenv("PINGAIC_TF_TEST_MOCK_SERVICE")) == "true" {
-		testServer := mockVariableHttpServer()
-		testServerUrl = utils.Pointer(testServer.URL)
-		os.Setenv("PINGAIC_TF_TEST_OVERRIDE_URL", testServer.URL)
-		defer testServer.Close()
-	}
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -153,7 +133,7 @@ func variable_CheckComputedValuesComplete() resource.TestCheckFunc {
 
 // Delete the resource
 func variable_Delete(t *testing.T) {
-	testClient := acctest.Client(testServerUrl)
+	testClient := acctest.Client()
 	_, _, err := testClient.VariablesAPI.DeleteVariable(acctest.AuthContext(), variableVariableId).Execute()
 	if err != nil {
 		t.Fatalf("Failed to delete config: %v", err)
@@ -162,63 +142,10 @@ func variable_Delete(t *testing.T) {
 
 // Test that any objects created by the test are destroyed
 func variable_CheckDestroy(s *terraform.State) error {
-	testClient := acctest.Client(testServerUrl)
+	testClient := acctest.Client()
 	_, _, err := testClient.VariablesAPI.DeleteVariable(acctest.AuthContext(), variableVariableId).Execute()
 	if err == nil {
 		return fmt.Errorf("variable still exists after tests. Expected it to be destroyed")
 	}
 	return nil
-}
-
-type variable struct {
-	Description    string `json:"description"`
-	ExpressionType string `json:"expressionType"`
-	Id             string `json:"_id"`
-	LastChangeDate string `json:"lastChangeDate"`
-	LastChangedBy  string `json:"lastChangedBy"`
-	Loaded         bool   `json:"loaded"`
-	ValueBase64    string `json:"valueBase64"`
-}
-
-var testVars = map[string]variable{}
-
-func mockVariableHttpServer() *httptest.Server {
-	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var out []byte
-		varId := strings.Split(r.URL.String(), "/")[3]
-		switch r.Method {
-		case http.MethodGet:
-			storedVar, ok := testVars[varId]
-			if !ok {
-				http.Error(w, "variable not found", http.StatusNotFound)
-				return
-			}
-			out, _ = json.Marshal(storedVar)
-		case http.MethodPut:
-			var inputVar variable
-			err := json.NewDecoder(r.Body).Decode(&inputVar)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			inputVar.Id = varId
-			inputVar.LastChangeDate = "2024-01-01T00:00:00Z"
-			inputVar.LastChangedBy = "user"
-			inputVar.Loaded = true
-			testVars[varId] = inputVar
-			out, _ = json.Marshal(inputVar)
-		case http.MethodDelete:
-			storedVar, ok := testVars[varId]
-			if !ok {
-				http.Error(w, "variable not found", http.StatusNotFound)
-				return
-			}
-			delete(testVars, varId)
-			out, _ = json.Marshal(storedVar)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Content-API-Version", "1.0")
-		w.WriteHeader(http.StatusOK)
-		w.Write(out)
-	}))
 }

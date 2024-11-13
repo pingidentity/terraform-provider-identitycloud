@@ -1,0 +1,1 @@
+terraform import identitycloud_promotion_lock.example id

@@ -9,8 +9,6 @@ description: |-
 
 {{ .Description | trimspace }}
 
-Any custom domains will be validated by AIC when set. CNAME record verification can also be deactivated by submitting a ticket. See [the documentation on custom domains](https://backstage.forgerock.com/docs/idcloud/latest/realms/custom-domains.html) for more information.
-
 ## Example Usage
 
 {{ tffile (printf "%s%s%s" "examples/resources/" .Name "/resource.tf") }}
@@ -21,6 +19,6 @@ Any custom domains will be validated by AIC when set. CNAME record verification 
 
 Import is supported using the following syntax:
 
-~> realm_id should be either `alpha` or `bravo`.
+~> This resource is singleton, so the value of "id" doesn't matter - it is just a placeholder, and required by Terraform
 
 {{ codefile "shell" (printf "%s%s%s" "examples/resources/" .Name "/import.sh") }}
