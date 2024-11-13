@@ -37,4 +37,33 @@ jobs:
         env:
           TF_ACC: "1"
           PINGAIC_TF_TENANT_ENV_FQDN: ${{ secrets.PINGAIC_TF_TENANT_ENV_FQDN }}
-
+  promotionacceptance:
+    # Note: if this fails, it may be necessary to manually unlock the environment with the API to allow other tests to succeed
+    name: Promotion Lock Acceptance Tests
+    strategy:
+      fail-fast: false
+      matrix:
+        terraform:
+          - "1.6.*"
+      max-parallel: 1
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+          cache: true
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ matrix.terraform }}
+          terraform_wrapper: false
+      - run: sudo apt-get install jose
+      - run: ./scripts/get-acctest-access-token.sh
+        env:
+          SERVICE_ACCOUNT_ID: ${{ secrets.SERVICE_ACCOUNT_ID }}
+          SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.SERVICE_ACCOUNT_PRIVATE_KEY }}
+          PINGAIC_TF_TENANT_ENV_FQDN: ${{ secrets.PINGAIC_TF_TENANT_ENV_FQDN }}
+      - run: export PINGAIC_TF_ACCESS_TOKEN=$(cat ./access_token.txt) && make testaccpromotion
+        env:
+          TF_ACC: "1"
+          PINGAIC_TF_TENANT_ENV_FQDN: ${{ secrets.PINGAIC_TF_TENANT_ENV_FQDN }}
