@@ -27,8 +27,9 @@ func CookieDomainsResource() resource.Resource {
 }
 
 type cookieDomainsResource struct {
-	apiClient   *client.APIClient
-	accessToken string
+	apiClient                 *client.APIClient
+	accessToken               *string
+	serviceAccountTokenSource *client.ServiceAccountTokenSource
 }
 
 func (r *cookieDomainsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -47,6 +48,7 @@ func (r *cookieDomainsResource) Configure(_ context.Context, req resource.Config
 	}
 	r.apiClient = resourceConfig.ApiClient
 	r.accessToken = resourceConfig.AccessToken
+	r.serviceAccountTokenSource = resourceConfig.ServiceAccountConfig
 }
 
 type cookieDomainsResourceModel struct {
@@ -120,7 +122,7 @@ func (r *cookieDomainsResource) Create(ctx context.Context, req resource.CreateR
 	// Update API call logic, since this is a singleton resource
 	clientData, diags := data.buildClientStruct()
 	resp.Diagnostics.Append(diags...)
-	apiUpdateRequest := r.apiClient.CookieDomainsAPI.SetCookieDomains(auth.AuthContext(ctx, r.accessToken))
+	apiUpdateRequest := r.apiClient.CookieDomainsAPI.SetCookieDomains(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource))
 	apiUpdateRequest = apiUpdateRequest.Body(*clientData)
 	responseData, httpResp, err := r.apiClient.CookieDomainsAPI.SetCookieDomainsExecute(apiUpdateRequest)
 	if err != nil {
@@ -146,7 +148,7 @@ func (r *cookieDomainsResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	// Read API call logic
-	responseData, httpResp, err := r.apiClient.CookieDomainsAPI.GetCookieDomains(auth.AuthContext(ctx, r.accessToken)).Execute()
+	responseData, httpResp, err := r.apiClient.CookieDomainsAPI.GetCookieDomains(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource)).Execute()
 	if err != nil {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			providererror.AddResourceNotFoundWarning(ctx, &resp.Diagnostics, "cookieDomains", httpResp)
@@ -177,7 +179,7 @@ func (r *cookieDomainsResource) Update(ctx context.Context, req resource.UpdateR
 	// Update API call logic
 	clientData, diags := data.buildClientStruct()
 	resp.Diagnostics.Append(diags...)
-	apiUpdateRequest := r.apiClient.CookieDomainsAPI.SetCookieDomains(auth.AuthContext(ctx, r.accessToken))
+	apiUpdateRequest := r.apiClient.CookieDomainsAPI.SetCookieDomains(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource))
 	apiUpdateRequest = apiUpdateRequest.Body(*clientData)
 	responseData, httpResp, err := r.apiClient.CookieDomainsAPI.SetCookieDomainsExecute(apiUpdateRequest)
 	if err != nil {
@@ -198,7 +200,7 @@ func (r *cookieDomainsResource) Delete(ctx context.Context, req resource.DeleteR
 	// this method can be replaced with a no-op with a diagnostic warning message about being unable to set to the default state.
 	// Update API call logic to reset to default
 	defaultClientData := r.buildDefaultClientStruct()
-	apiUpdateRequest := r.apiClient.CookieDomainsAPI.SetCookieDomains(auth.AuthContext(ctx, r.accessToken))
+	apiUpdateRequest := r.apiClient.CookieDomainsAPI.SetCookieDomains(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource))
 	apiUpdateRequest = apiUpdateRequest.Body(*defaultClientData)
 	_, httpResp, err := r.apiClient.CookieDomainsAPI.SetCookieDomainsExecute(apiUpdateRequest)
 	if err != nil {

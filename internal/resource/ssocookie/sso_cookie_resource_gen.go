@@ -29,8 +29,9 @@ func SsoCookieResource() resource.Resource {
 }
 
 type ssoCookieResource struct {
-	apiClient   *client.APIClient
-	accessToken string
+	apiClient                 *client.APIClient
+	accessToken               *string
+	serviceAccountTokenSource *client.ServiceAccountTokenSource
 }
 
 func (r *ssoCookieResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -49,6 +50,7 @@ func (r *ssoCookieResource) Configure(_ context.Context, req resource.ConfigureR
 	}
 	r.apiClient = resourceConfig.ApiClient
 	r.accessToken = resourceConfig.AccessToken
+	r.serviceAccountTokenSource = resourceConfig.ServiceAccountConfig
 }
 
 type ssoCookieResourceModel struct {
@@ -96,7 +98,7 @@ func (r *ssoCookieResource) Create(ctx context.Context, req resource.CreateReque
 	// Update API call logic, since this is a singleton resource
 	clientData, diags := data.buildClientStruct()
 	resp.Diagnostics.Append(diags...)
-	apiUpdateRequest := r.apiClient.SSOCookieAPI.SetSSOCookie(auth.AuthContext(ctx, r.accessToken))
+	apiUpdateRequest := r.apiClient.SSOCookieAPI.SetSSOCookie(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource))
 	apiUpdateRequest = apiUpdateRequest.Body(*clientData)
 	responseData, _, err := r.apiClient.SSOCookieAPI.SetSSOCookieExecute(apiUpdateRequest)
 	if err != nil {
@@ -122,7 +124,7 @@ func (r *ssoCookieResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	// Read API call logic
-	responseData, httpResp, err := r.apiClient.SSOCookieAPI.GetSSOCookie(auth.AuthContext(ctx, r.accessToken)).Execute()
+	responseData, httpResp, err := r.apiClient.SSOCookieAPI.GetSSOCookie(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource)).Execute()
 	if err != nil {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			providererror.AddResourceNotFoundWarning(ctx, &resp.Diagnostics, "ssoCookie", httpResp)
@@ -153,7 +155,7 @@ func (r *ssoCookieResource) Update(ctx context.Context, req resource.UpdateReque
 	// Update API call logic
 	clientData, diags := data.buildClientStruct()
 	resp.Diagnostics.Append(diags...)
-	apiUpdateRequest := r.apiClient.SSOCookieAPI.SetSSOCookie(auth.AuthContext(ctx, r.accessToken))
+	apiUpdateRequest := r.apiClient.SSOCookieAPI.SetSSOCookie(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource))
 	apiUpdateRequest = apiUpdateRequest.Body(*clientData)
 	responseData, httpResp, err := r.apiClient.SSOCookieAPI.SetSSOCookieExecute(apiUpdateRequest)
 	if err != nil {
@@ -171,7 +173,7 @@ func (r *ssoCookieResource) Update(ctx context.Context, req resource.UpdateReque
 func (r *ssoCookieResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// This resource is singleton, so it can't be deleted from the service.
 	// Instead this delete method will attempt to set the resource to its default state on the service.
-	apiUpdateRequest := r.apiClient.SSOCookieAPI.ResetSSOCookie(auth.AuthContext(ctx, r.accessToken))
+	apiUpdateRequest := r.apiClient.SSOCookieAPI.ResetSSOCookie(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource))
 	apiUpdateRequest = apiUpdateRequest.Action("reset")
 	_, _, err := r.apiClient.SSOCookieAPI.ResetSSOCookieExecute(apiUpdateRequest)
 	if err != nil {

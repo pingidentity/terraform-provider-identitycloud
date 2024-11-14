@@ -33,8 +33,9 @@ func CustomDomainVerifyResource() resource.Resource {
 }
 
 type customDomainVerifyResource struct {
-	apiClient   *client.APIClient
-	accessToken string
+	apiClient                 *client.APIClient
+	accessToken               *string
+	serviceAccountTokenSource *client.ServiceAccountTokenSource
 }
 
 func (r *customDomainVerifyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -53,6 +54,7 @@ func (r *customDomainVerifyResource) Configure(_ context.Context, req resource.C
 	}
 	r.apiClient = resourceConfig.ApiClient
 	r.accessToken = resourceConfig.AccessToken
+	r.serviceAccountTokenSource = resourceConfig.ServiceAccountConfig
 }
 
 type customDomainVerifyResourceModel struct {
@@ -110,7 +112,7 @@ func (r *customDomainVerifyResource) Create(ctx context.Context, req resource.Cr
 
 	clientData, diags := data.buildClientStruct()
 	resp.Diagnostics.Append(diags...)
-	apiUpdateRequest := r.apiClient.CustomDomainsAPI.VerifyCustomDomains(auth.AuthContext(ctx, r.accessToken))
+	apiUpdateRequest := r.apiClient.CustomDomainsAPI.VerifyCustomDomains(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource))
 	apiUpdateRequest = apiUpdateRequest.Action("verify")
 	apiUpdateRequest = apiUpdateRequest.Body(*clientData)
 
@@ -150,7 +152,7 @@ func (r *customDomainVerifyResource) Read(ctx context.Context, req resource.Read
 
 	clientData, diags := data.buildClientStruct()
 	resp.Diagnostics.Append(diags...)
-	apiUpdateRequest := r.apiClient.CustomDomainsAPI.VerifyCustomDomains(auth.AuthContext(ctx, r.accessToken))
+	apiUpdateRequest := r.apiClient.CustomDomainsAPI.VerifyCustomDomains(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource))
 	apiUpdateRequest = apiUpdateRequest.Action("verify")
 	apiUpdateRequest = apiUpdateRequest.Body(*clientData)
 	httpResp, err := r.apiClient.CustomDomainsAPI.VerifyCustomDomainsExecute(apiUpdateRequest)

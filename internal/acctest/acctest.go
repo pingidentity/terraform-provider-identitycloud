@@ -16,7 +16,8 @@ func ConfigurationPreCheck(t *testing.T) {
 	errorFound := false
 	envVars := []string{
 		"PINGAIC_TF_TENANT_ENV_FQDN",
-		"PINGAIC_TF_ACCESS_TOKEN",
+		"PINGAIC_TF_SERVICE_ACCOUNT_ID",
+		"PINGAIC_TF_SERVICE_ACCOUNT_PRIVATE_KEY",
 	}
 	for _, envVar := range envVars {
 		if os.Getenv(envVar) == "" {
@@ -44,5 +45,18 @@ func Client() *client.APIClient {
 }
 
 func AuthContext() context.Context {
-	return auth.AuthContext(context.Background(), os.Getenv("PINGAIC_TF_ACCESS_TOKEN"))
+	tokenSource := client.ServiceAccountTokenSource{
+		TenantFqdn:               os.Getenv("PINGAIC_TF_TENANT_ENV_FQDN"),
+		ServiceAccountId:         os.Getenv("PINGAIC_TF_SERVICE_ACCOUNT_ID"),
+		ServiceAccountPrivateKey: os.Getenv("PINGAIC_TF_SERVICE_ACCOUNT_PRIVATE_KEY"),
+		Scopes: []string{
+			"fr:idc:certificate:*",
+			"fr:idc:content-security-policy:*",
+			"fr:idc:cookie-domain:*",
+			"fr:idc:custom-domain:*",
+			"fr:idc:esv:* fr:idc:promotion:*",
+			"fr:idc:sso-cookie:*",
+		},
+	}
+	return auth.AuthContext(context.Background(), nil, &tokenSource)
 }
