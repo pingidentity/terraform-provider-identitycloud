@@ -36,6 +36,7 @@ jobs:
   promotionacceptance:
     # Note: if this fails, it may be necessary to manually unlock the environment with the API to allow other tests to succeed
     name: Promotion Lock Acceptance Tests
+    needs: [acceptance]
     strategy:
       fail-fast: false
       matrix:
