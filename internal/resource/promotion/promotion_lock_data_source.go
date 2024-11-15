@@ -26,8 +26,9 @@ func PromotionLockDataSource() datasource.DataSource {
 }
 
 type promotionLockDataSource struct {
-	apiClient   *client.APIClient
-	accessToken string
+	apiClient                 *client.APIClient
+	accessToken               *string
+	serviceAccountTokenSource *client.ServiceAccountTokenSource
 }
 
 func (r *promotionLockDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -46,6 +47,7 @@ func (r *promotionLockDataSource) Configure(_ context.Context, req datasource.Co
 	}
 	r.apiClient = resourceConfig.ApiClient
 	r.accessToken = resourceConfig.AccessToken
+	r.serviceAccountTokenSource = resourceConfig.ServiceAccountConfig
 }
 
 type promotionLockDataSourceModel struct {
@@ -179,7 +181,7 @@ func (r *promotionLockDataSource) Read(ctx context.Context, req datasource.ReadR
 	}
 
 	// Read API call logic
-	responseData, httpResp, err := r.apiClient.PromotionAPI.CheckLock(auth.AuthContext(ctx, r.accessToken)).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
+	responseData, httpResp, err := r.apiClient.PromotionAPI.CheckLock(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource)).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
 	if err != nil {
 		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while reading the promotionLock", err, httpResp)
 		return

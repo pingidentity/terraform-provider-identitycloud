@@ -31,8 +31,9 @@ func PromotionLockResource() resource.Resource {
 }
 
 type promotionLockResource struct {
-	apiClient   *client.APIClient
-	accessToken string
+	apiClient                 *client.APIClient
+	accessToken               *string
+	serviceAccountTokenSource *client.ServiceAccountTokenSource
 }
 
 func (r *promotionLockResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -51,6 +52,7 @@ func (r *promotionLockResource) Configure(_ context.Context, req resource.Config
 	}
 	r.apiClient = resourceConfig.ApiClient
 	r.accessToken = resourceConfig.AccessToken
+	r.serviceAccountTokenSource = resourceConfig.ServiceAccountConfig
 }
 
 type promotionLockResourceModel struct {
@@ -213,7 +215,7 @@ func (r *promotionLockResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	// Lock API call logic
-	apiCreateRequest := r.apiClient.PromotionAPI.Lock(auth.AuthContext(ctx, r.accessToken))
+	apiCreateRequest := r.apiClient.PromotionAPI.Lock(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource))
 	apiCreateRequest = apiCreateRequest.AcceptAPIVersion("protocol=1.0,resource=1.0")
 
 	retries := retry.NewFibonacci(1 * time.Second)
@@ -234,7 +236,7 @@ func (r *promotionLockResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	// Read the lock status after creating the lock
-	responseData, httpResp, err := r.apiClient.PromotionAPI.CheckLock(auth.AuthContext(ctx, r.accessToken)).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
+	responseData, httpResp, err := r.apiClient.PromotionAPI.CheckLock(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource)).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
 	if err != nil {
 		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while reading the promotionLock", err, httpResp)
 		return
@@ -258,7 +260,7 @@ func (r *promotionLockResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	// Read API call logic
-	responseData, httpResp, err := r.apiClient.PromotionAPI.CheckLock(auth.AuthContext(ctx, r.accessToken)).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
+	responseData, httpResp, err := r.apiClient.PromotionAPI.CheckLock(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource)).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
 	if err != nil {
 		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while reading the promotionLock", err, httpResp)
 		return
@@ -308,7 +310,7 @@ func (r *promotionLockResource) Delete(ctx context.Context, req resource.DeleteR
 	var httpResp *http.Response
 	var err error
 	finalErr := retry.Do(ctx, retries, func(ctx context.Context) error {
-		_, httpResp, err = r.apiClient.PromotionAPI.Unlock(auth.AuthContext(ctx, r.accessToken), data.PromotionId.ValueString()).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
+		_, httpResp, err = r.apiClient.PromotionAPI.Unlock(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.PromotionId.ValueString()).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
 		if err != nil && httpResp != nil && httpResp.StatusCode == 409 {
 			return retry.RetryableError(err)
 		}

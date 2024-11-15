@@ -30,8 +30,9 @@ func CertificateResource() resource.Resource {
 }
 
 type certificateResource struct {
-	apiClient   *client.APIClient
-	accessToken string
+	apiClient                 *client.APIClient
+	accessToken               *string
+	serviceAccountTokenSource *client.ServiceAccountTokenSource
 }
 
 func (r *certificateResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -50,6 +51,7 @@ func (r *certificateResource) Configure(_ context.Context, req resource.Configur
 	}
 	r.apiClient = resourceConfig.ApiClient
 	r.accessToken = resourceConfig.AccessToken
+	r.serviceAccountTokenSource = resourceConfig.ServiceAccountConfig
 }
 
 type certificateResourceModel struct {
@@ -178,7 +180,7 @@ func (r *certificateResource) Create(ctx context.Context, req resource.CreateReq
 	// Create API call logic
 	clientData, diags := data.buildClientStruct()
 	resp.Diagnostics.Append(diags...)
-	apiCreateRequest := r.apiClient.CertificatesAPI.CreateCertificate(auth.AuthContext(ctx, r.accessToken))
+	apiCreateRequest := r.apiClient.CertificatesAPI.CreateCertificate(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource))
 	apiCreateRequest = apiCreateRequest.Body(*clientData)
 	responseData, httpResp, err := r.apiClient.CertificatesAPI.CreateCertificateExecute(apiCreateRequest)
 	if err != nil {
@@ -204,7 +206,7 @@ func (r *certificateResource) Read(ctx context.Context, req resource.ReadRequest
 	}
 
 	// Read API call logic
-	responseData, httpResp, err := r.apiClient.CertificatesAPI.GetCertificateByID(auth.AuthContext(ctx, r.accessToken), data.Id.ValueString()).Execute()
+	responseData, httpResp, err := r.apiClient.CertificatesAPI.GetCertificateByID(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.Id.ValueString()).Execute()
 	if err != nil {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			providererror.AddResourceNotFoundWarning(ctx, &resp.Diagnostics, "certificate", httpResp)
@@ -233,7 +235,7 @@ func (r *certificateResource) Delete(ctx context.Context, req resource.DeleteReq
 	}
 
 	// Delete API call logic
-	httpResp, err := r.apiClient.CertificatesAPI.DeleteCertificateByID(auth.AuthContext(ctx, r.accessToken), data.Id.ValueString()).Execute()
+	httpResp, err := r.apiClient.CertificatesAPI.DeleteCertificateByID(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.Id.ValueString()).Execute()
 	if err != nil && (httpResp == nil || httpResp.StatusCode != 404) {
 		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while deleting the certificate", err, httpResp)
 	}

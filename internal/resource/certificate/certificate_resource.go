@@ -24,7 +24,7 @@ func (r *certificateResource) Update(ctx context.Context, req resource.UpdateReq
 	clientData := client.UpdateCertificateRequest{
 		Active: data.Active.ValueBoolPointer(),
 	}
-	apiUpdateRequest := r.apiClient.CertificatesAPI.UpdateCertificateByID(auth.AuthContext(ctx, r.accessToken), data.Id.ValueString())
+	apiUpdateRequest := r.apiClient.CertificatesAPI.UpdateCertificateByID(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.Id.ValueString())
 	apiUpdateRequest = apiUpdateRequest.Body(clientData)
 	responseData, httpResp, err := r.apiClient.CertificatesAPI.UpdateCertificateByIDExecute(apiUpdateRequest)
 	if err != nil {

@@ -17,6 +17,8 @@ import (
 const customDomainsRealm = "alpha"
 
 func TestAccCustomDomains_MinimalMaximal(t *testing.T) {
+	//TODO skipping for now because we don't have a custom domain to test with
+	t.SkipNow()
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){

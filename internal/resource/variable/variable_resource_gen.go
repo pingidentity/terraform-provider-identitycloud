@@ -34,8 +34,9 @@ func VariableResource() resource.Resource {
 }
 
 type variableResource struct {
-	apiClient   *client.APIClient
-	accessToken string
+	apiClient                 *client.APIClient
+	accessToken               *string
+	serviceAccountTokenSource *client.ServiceAccountTokenSource
 }
 
 func (r *variableResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -54,6 +55,7 @@ func (r *variableResource) Configure(_ context.Context, req resource.ConfigureRe
 	}
 	r.apiClient = resourceConfig.ApiClient
 	r.accessToken = resourceConfig.AccessToken
+	r.serviceAccountTokenSource = resourceConfig.ServiceAccountConfig
 }
 
 type variableResourceModel struct {
@@ -176,7 +178,7 @@ func (r *variableResource) Create(ctx context.Context, req resource.CreateReques
 	// Create API call logic
 	clientData, diags := data.buildClientStruct()
 	resp.Diagnostics.Append(diags...)
-	apiCreateRequest := r.apiClient.VariablesAPI.CreateVariables(auth.AuthContext(ctx, r.accessToken), data.VariableId.ValueString())
+	apiCreateRequest := r.apiClient.VariablesAPI.CreateVariables(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.VariableId.ValueString())
 	apiCreateRequest = apiCreateRequest.Body(*clientData)
 	responseData, httpResp, err := r.apiClient.VariablesAPI.CreateVariablesExecute(apiCreateRequest)
 	if err != nil {
@@ -202,7 +204,7 @@ func (r *variableResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Read API call logic
-	responseData, httpResp, err := r.apiClient.VariablesAPI.GetVariable(auth.AuthContext(ctx, r.accessToken), data.VariableId.ValueString()).Execute()
+	responseData, httpResp, err := r.apiClient.VariablesAPI.GetVariable(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.VariableId.ValueString()).Execute()
 	if err != nil {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			providererror.AddResourceNotFoundWarning(ctx, &resp.Diagnostics, "variable", httpResp)
@@ -233,7 +235,7 @@ func (r *variableResource) Update(ctx context.Context, req resource.UpdateReques
 	// Update API call logic
 	clientData, diags := data.buildClientStruct()
 	resp.Diagnostics.Append(diags...)
-	apiUpdateRequest := r.apiClient.VariablesAPI.CreateVariables(auth.AuthContext(ctx, r.accessToken), data.VariableId.ValueString())
+	apiUpdateRequest := r.apiClient.VariablesAPI.CreateVariables(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.VariableId.ValueString())
 	apiUpdateRequest = apiUpdateRequest.Body(*clientData)
 	responseData, httpResp, err := r.apiClient.VariablesAPI.CreateVariablesExecute(apiUpdateRequest)
 	if err != nil {
@@ -259,7 +261,7 @@ func (r *variableResource) Delete(ctx context.Context, req resource.DeleteReques
 	}
 
 	// Delete API call logic
-	_, httpResp, err := r.apiClient.VariablesAPI.DeleteVariable(auth.AuthContext(ctx, r.accessToken), data.VariableId.ValueString()).Execute()
+	_, httpResp, err := r.apiClient.VariablesAPI.DeleteVariable(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.VariableId.ValueString()).Execute()
 	if err != nil && (httpResp == nil || httpResp.StatusCode != 404) {
 		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while deleting the variable", err, httpResp)
 	}

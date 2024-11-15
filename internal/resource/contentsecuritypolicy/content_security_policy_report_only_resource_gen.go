@@ -28,8 +28,9 @@ func ContentSecurityPolicyReportOnlyResource() resource.Resource {
 }
 
 type contentSecurityPolicyReportOnlyResource struct {
-	apiClient   *client.APIClient
-	accessToken string
+	apiClient                 *client.APIClient
+	accessToken               *string
+	serviceAccountTokenSource *client.ServiceAccountTokenSource
 }
 
 func (r *contentSecurityPolicyReportOnlyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -48,6 +49,7 @@ func (r *contentSecurityPolicyReportOnlyResource) Configure(_ context.Context, r
 	}
 	r.apiClient = resourceConfig.ApiClient
 	r.accessToken = resourceConfig.AccessToken
+	r.serviceAccountTokenSource = resourceConfig.ServiceAccountConfig
 }
 
 type contentSecurityPolicyReportOnlyResourceModel struct {
@@ -141,7 +143,7 @@ func (r *contentSecurityPolicyReportOnlyResource) Create(ctx context.Context, re
 	// Update API call logic, since this is a singleton resource
 	clientData, diags := data.buildClientStruct()
 	resp.Diagnostics.Append(diags...)
-	apiUpdateRequest := r.apiClient.ContentSecurityPolicyAPI.SetReportOnlyContentSecurityPolicy(auth.AuthContext(ctx, r.accessToken))
+	apiUpdateRequest := r.apiClient.ContentSecurityPolicyAPI.SetReportOnlyContentSecurityPolicy(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource))
 	apiUpdateRequest = apiUpdateRequest.Body(*clientData)
 	responseData, _, err := r.apiClient.ContentSecurityPolicyAPI.SetReportOnlyContentSecurityPolicyExecute(apiUpdateRequest)
 	if err != nil {
@@ -167,7 +169,7 @@ func (r *contentSecurityPolicyReportOnlyResource) Read(ctx context.Context, req 
 	}
 
 	// Read API call logic
-	responseData, httpResp, err := r.apiClient.ContentSecurityPolicyAPI.GetReportOnlyContentSecurityPolicy(auth.AuthContext(ctx, r.accessToken)).Execute()
+	responseData, httpResp, err := r.apiClient.ContentSecurityPolicyAPI.GetReportOnlyContentSecurityPolicy(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource)).Execute()
 	if err != nil {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			providererror.AddResourceNotFoundWarning(ctx, &resp.Diagnostics, "contentSecurityPolicyReportOnly", httpResp)
@@ -198,7 +200,7 @@ func (r *contentSecurityPolicyReportOnlyResource) Update(ctx context.Context, re
 	// Update API call logic
 	clientData, diags := data.buildClientStruct()
 	resp.Diagnostics.Append(diags...)
-	apiUpdateRequest := r.apiClient.ContentSecurityPolicyAPI.SetReportOnlyContentSecurityPolicy(auth.AuthContext(ctx, r.accessToken))
+	apiUpdateRequest := r.apiClient.ContentSecurityPolicyAPI.SetReportOnlyContentSecurityPolicy(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource))
 	apiUpdateRequest = apiUpdateRequest.Body(*clientData)
 	responseData, httpResp, err := r.apiClient.ContentSecurityPolicyAPI.SetReportOnlyContentSecurityPolicyExecute(apiUpdateRequest)
 	if err != nil {
@@ -219,7 +221,7 @@ func (r *contentSecurityPolicyReportOnlyResource) Delete(ctx context.Context, re
 	// this method can be replaced with a no-op with a diagnostic warning message about being unable to set to the default state.
 	// Update API call logic to reset to default
 	defaultClientData := r.buildDefaultClientStruct()
-	apiUpdateRequest := r.apiClient.ContentSecurityPolicyAPI.SetReportOnlyContentSecurityPolicy(auth.AuthContext(ctx, r.accessToken))
+	apiUpdateRequest := r.apiClient.ContentSecurityPolicyAPI.SetReportOnlyContentSecurityPolicy(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource))
 	apiUpdateRequest = apiUpdateRequest.Body(*defaultClientData)
 	_, _, err := r.apiClient.ContentSecurityPolicyAPI.SetReportOnlyContentSecurityPolicyExecute(apiUpdateRequest)
 	if err != nil {

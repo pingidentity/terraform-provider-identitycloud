@@ -35,8 +35,9 @@ func CustomDomainsResource() resource.Resource {
 }
 
 type customDomainsResource struct {
-	apiClient   *client.APIClient
-	accessToken string
+	apiClient                 *client.APIClient
+	accessToken               *string
+	serviceAccountTokenSource *client.ServiceAccountTokenSource
 }
 
 func (r *customDomainsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -55,6 +56,7 @@ func (r *customDomainsResource) Configure(_ context.Context, req resource.Config
 	}
 	r.apiClient = resourceConfig.ApiClient
 	r.accessToken = resourceConfig.AccessToken
+	r.serviceAccountTokenSource = resourceConfig.ServiceAccountConfig
 }
 
 type customDomainsResourceModel struct {
@@ -145,7 +147,7 @@ func (r *customDomainsResource) Create(ctx context.Context, req resource.CreateR
 	// Update API call logic, since this is a singleton resource
 	clientData, diags := data.buildClientStruct()
 	resp.Diagnostics.Append(diags...)
-	apiUpdateRequest := r.apiClient.CustomDomainsAPI.SetCustomDomains(auth.AuthContext(ctx, r.accessToken), data.Realm.ValueString())
+	apiUpdateRequest := r.apiClient.CustomDomainsAPI.SetCustomDomains(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.Realm.ValueString())
 	apiUpdateRequest = apiUpdateRequest.Body(*clientData)
 
 	retries := retry.NewFibonacci(1 * time.Second)
@@ -185,7 +187,7 @@ func (r *customDomainsResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	// Read API call logic
-	responseData, httpResp, err := r.apiClient.CustomDomainsAPI.GetCustomDomains(auth.AuthContext(ctx, r.accessToken), data.Realm.ValueString()).Execute()
+	responseData, httpResp, err := r.apiClient.CustomDomainsAPI.GetCustomDomains(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.Realm.ValueString()).Execute()
 	if err != nil {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			providererror.AddResourceNotFoundWarning(ctx, &resp.Diagnostics, "customDomains", httpResp)
@@ -223,7 +225,7 @@ func (r *customDomainsResource) Update(ctx context.Context, req resource.UpdateR
 	// Update API call logic
 	clientData, diags := data.buildClientStruct()
 	resp.Diagnostics.Append(diags...)
-	apiUpdateRequest := r.apiClient.CustomDomainsAPI.SetCustomDomains(auth.AuthContext(ctx, r.accessToken), data.Realm.ValueString())
+	apiUpdateRequest := r.apiClient.CustomDomainsAPI.SetCustomDomains(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.Realm.ValueString())
 	apiUpdateRequest = apiUpdateRequest.Body(*clientData)
 
 	retries := retry.NewFibonacci(1 * time.Second)
@@ -267,7 +269,7 @@ func (r *customDomainsResource) Delete(ctx context.Context, req resource.DeleteR
 
 	// Update API call logic to reset to default
 	defaultClientData := r.buildDefaultClientStruct()
-	apiUpdateRequest := r.apiClient.CustomDomainsAPI.SetCustomDomains(auth.AuthContext(ctx, r.accessToken), data.Realm.ValueString())
+	apiUpdateRequest := r.apiClient.CustomDomainsAPI.SetCustomDomains(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.Realm.ValueString())
 	apiUpdateRequest = apiUpdateRequest.Body(*defaultClientData)
 	_, httpResp, err := r.apiClient.CustomDomainsAPI.SetCustomDomainsExecute(apiUpdateRequest)
 	if err != nil {
