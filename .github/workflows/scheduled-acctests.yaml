@@ -30,8 +30,8 @@ jobs:
       - run: make testacc
         env:
           TF_ACC: "1"
-          SERVICE_ACCOUNT_ID: ${{ secrets.SERVICE_ACCOUNT_ID }}
-          SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.SERVICE_ACCOUNT_PRIVATE_KEY }}
+          PINGAIC_TF_SERVICE_ACCOUNT_ID: ${{ secrets.SERVICE_ACCOUNT_ID }}
+          PINGAIC_TF_SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.SERVICE_ACCOUNT_PRIVATE_KEY }}
           PINGAIC_TF_TENANT_ENV_FQDN: ${{ secrets.PINGAIC_TF_TENANT_ENV_FQDN }}
   promotionacceptance:
     # Note: if this fails, it may be necessary to manually unlock the environment with the API to allow other tests to succeed
@@ -53,13 +53,9 @@ jobs:
         with:
           terraform_version: ${{ matrix.terraform }}
           terraform_wrapper: false
-      - run: sudo apt-get install jose
-      - run: ./scripts/get-acctest-access-token.sh
-        env:
-          SERVICE_ACCOUNT_ID: ${{ secrets.SERVICE_ACCOUNT_ID }}
-          SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.SERVICE_ACCOUNT_PRIVATE_KEY }}
-          PINGAIC_TF_TENANT_ENV_FQDN: ${{ secrets.PINGAIC_TF_TENANT_ENV_FQDN }}
-      - run: export PINGAIC_TF_ACCESS_TOKEN=$(cat ./access_token.txt) && make testaccpromotion
+      - run: make testaccpromotion
         env:
           TF_ACC: "1"
+          PINGAIC_TF_SERVICE_ACCOUNT_ID: ${{ secrets.SERVICE_ACCOUNT_ID }}
+          PINGAIC_TF_SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.SERVICE_ACCOUNT_PRIVATE_KEY }}
           PINGAIC_TF_TENANT_ENV_FQDN: ${{ secrets.PINGAIC_TF_TENANT_ENV_FQDN }}

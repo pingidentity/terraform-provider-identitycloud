@@ -159,6 +159,6 @@ jobs:
       - run: make testacc
         env:
           TF_ACC: "1"
-          SERVICE_ACCOUNT_ID: ${{ secrets.SERVICE_ACCOUNT_ID }}
-          SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.SERVICE_ACCOUNT_PRIVATE_KEY }}
+          PINGAIC_TF_SERVICE_ACCOUNT_ID: ${{ secrets.SERVICE_ACCOUNT_ID }}
+          PINGAIC_TF_SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.SERVICE_ACCOUNT_PRIVATE_KEY }}
           PINGAIC_TF_TENANT_ENV_FQDN: ${{ secrets.PINGAIC_TF_TENANT_ENV_FQDN }}
