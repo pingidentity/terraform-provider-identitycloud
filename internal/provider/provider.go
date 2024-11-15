@@ -77,17 +77,17 @@ func (p *identityCloudProvider) Schema(_ context.Context, _ provider.SchemaReque
 				Sensitive:           true,
 			},
 			"access_token": schema.StringAttribute{
-				MarkdownDescription: "Access token for the PingOne Advanced Identity Cloud Rest API. Default value can be set with the `PINGAIC_TF_ACCESS_TOKEN` environment variable.",
+				MarkdownDescription: "Access token for the PingOne Advanced Identity Cloud Rest API. Default value can be set with the `PINGAIC_TF_ACCESS_TOKEN` environment variable. If `access_token` is provided, `service_account_id` and `service_account_private_key` should not be provided.",
 				Optional:            true,
 				Sensitive:           true,
 			},
 			"service_account_id": schema.StringAttribute{
-				MarkdownDescription: "Service account ID for the PingOne Advanced Identity Cloud Rest API. The service account must have the following scopes: `fr:idc:certificate:*`, `fr:idc:content-security-policy:*`, `fr:idc:cookie-domain:*`, `fr:idc:custom-domain:*`, `fr:idc:esv:*`, `fr:idc:promotion:*`, `fr:idc:sso-cookie:*`. Default value can be set with the `PINGAIC_TF_SERVICE_ACCOUNT_ID` environment variable.",
+				MarkdownDescription: "Service account ID for the PingOne Advanced Identity Cloud Rest API. The service account must have the following scopes: `fr:idc:certificate:*`, `fr:idc:content-security-policy:*`, `fr:idc:cookie-domain:*`, `fr:idc:custom-domain:*`, `fr:idc:esv:*`, `fr:idc:promotion:*`, `fr:idc:sso-cookie:*`. Default value can be set with the `PINGAIC_TF_SERVICE_ACCOUNT_ID` environment variable. If `service_account_id` and `service_account_private_key` are provided, `access_token` should not be provided.",
 				Optional:            true,
 				Sensitive:           true,
 			},
 			"service_account_private_key": schema.StringAttribute{
-				MarkdownDescription: "Service account private key for the PingOne Advanced Identity Cloud Rest API. Default value can be set with the `PINGAIC_TF_SERVICE_ACCOUNT_PRIVATE_KEY` environment variable.",
+				MarkdownDescription: "Service account private key for the PingOne Advanced Identity Cloud Rest API. Default value can be set with the `PINGAIC_TF_SERVICE_ACCOUNT_PRIVATE_KEY` environment variable. If `service_account_id` and `service_account_private_key` are provided, `access_token` should not be provided.",
 				Optional:            true,
 				Sensitive:           true,
 			},
@@ -137,6 +137,7 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 		}
 	}
 
+	// Or users may provider a service account id and private key
 	var serviceAccountId *string
 	if !config.ServiceAccountId.IsUnknown() && !config.ServiceAccountId.IsNull() {
 		serviceAccountId = config.ServiceAccountId.ValueStringPointer()
@@ -163,7 +164,7 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 	}
 
 	if accessToken != nil && (serviceAccountId != nil || serviceAccountPrivateKey != nil) {
-		resp.Diagnostics.AddError(providererror.InvalidProviderConfiguration, "Both `access_token` and `service_account_id` or `service_account_private_key` cannot be provided together. If not set in the provider configuration, they can be set with the `PINGAIC_TF_ACCESS_TOKEN`, `PINGAIC_TF_SERVICE_ACCOUNT_ID`, and `PINGAIC_TF_SERVICE_ACCOUNT_PRIVATE_KEY` environment variables, respectively.")
+		resp.Diagnostics.AddError(providererror.InvalidProviderConfiguration, "`access_token` should not be provided with either `service_account_id` or `service_account_private_key`. If not set in the provider configuration, they can be set with the `PINGAIC_TF_ACCESS_TOKEN`, `PINGAIC_TF_SERVICE_ACCOUNT_ID`, and `PINGAIC_TF_SERVICE_ACCOUNT_PRIVATE_KEY` environment variables, respectively.")
 	}
 
 	if resp.Diagnostics.HasError() {

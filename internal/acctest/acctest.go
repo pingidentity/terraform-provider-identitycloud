@@ -26,6 +26,11 @@ func ConfigurationPreCheck(t *testing.T) {
 		}
 	}
 
+	if os.Getenv("PINGAIC_TF_ACCESS_TOKEN") != "" {
+		t.Errorf("The 'PINGAIC_TF_ACCESS_TOKEN' environment variable must not be set to run acceptance tests")
+		errorFound = true
+	}
+
 	if errorFound {
 		t.FailNow()
 	}
