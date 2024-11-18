@@ -52,8 +52,8 @@ func promotionLock_MinimalHCL(includeDataSource bool) string {
 	result := `
 resource "identitycloud_promotion_lock" "example" {
   retry_timeouts = {
-    create = "8m"
-	delete = "8m"
+    create = "30m"
+	delete = "30m"
   }
 }
 

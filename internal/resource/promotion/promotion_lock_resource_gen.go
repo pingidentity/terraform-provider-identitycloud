@@ -4,6 +4,7 @@ package promotion
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"time"
 
@@ -316,7 +317,13 @@ func (r *promotionLockResource) Delete(ctx context.Context, req resource.DeleteR
 		tflog.Warn(ctx, "Environment unlock attempt")
 		_, httpResp, err = r.apiClient.PromotionAPI.Unlock(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.PromotionId.ValueString()).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
 		if err != nil && httpResp != nil && httpResp.StatusCode == 409 {
-			tflog.Warn(ctx, "Environment unlock retryable error: "+err.Error())
+			defer httpResp.Body.Close()
+			body, bodyErr := io.ReadAll(httpResp.Body)
+			if bodyErr == nil {
+				tflog.Warn(ctx, "Environment unlock retryable error: "+err.Error()+", "+string(body))
+			} else {
+				tflog.Warn(ctx, "Environment unlock retryable error (body read failed): "+err.Error())
+			}
 			return retry.RetryableError(err)
 		}
 		return err
