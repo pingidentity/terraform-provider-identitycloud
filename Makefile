@@ -23,7 +23,7 @@ testacc:
 	TF_ACC=1 go test `go list ./internal/... | grep -v -e promotion` -timeout 10m -v -p 4
 
 testaccpromotion:
-	TF_ACC=1 go test `go list ./internal/... | grep -e promotion` -timeout 20m -v -p 4
+	TF_ACC=1 TF_LOG=warn go test `go list ./internal/... | grep -e promotion` -timeout 15m -v -p 4
 
 testaccfolder:
 	TF_ACC=1 go test ./internal/resource/${ACC_TEST_FOLDER}... -timeout 10m -v -count=1

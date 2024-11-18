@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	client "github.com/pingidentity/identitycloud-go-client/identitycloud"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/auth"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/providererror"
@@ -223,8 +224,10 @@ func (r *promotionLockResource) Create(ctx context.Context, req resource.CreateR
 	var httpResp *http.Response
 	var err error
 	finalErr := retry.Do(ctx, retries, func(ctx context.Context) error {
+		tflog.Warn(ctx, "Environment lock attempt")
 		_, httpResp, err = r.apiClient.PromotionAPI.LockExecute(apiCreateRequest)
 		if err != nil && httpResp != nil && httpResp.StatusCode == 409 {
+			tflog.Warn(ctx, "Environment lock retryable error: "+err.Error())
 			return retry.RetryableError(err)
 		}
 		return err
@@ -310,8 +313,10 @@ func (r *promotionLockResource) Delete(ctx context.Context, req resource.DeleteR
 	var httpResp *http.Response
 	var err error
 	finalErr := retry.Do(ctx, retries, func(ctx context.Context) error {
+		tflog.Warn(ctx, "Environment unlock attempt")
 		_, httpResp, err = r.apiClient.PromotionAPI.Unlock(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.PromotionId.ValueString()).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
 		if err != nil && httpResp != nil && httpResp.StatusCode == 409 {
+			tflog.Warn(ctx, "Environment unlock retryable error: "+err.Error())
 			return retry.RetryableError(err)
 		}
 		return err
