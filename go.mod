@@ -16,7 +16,7 @@ require (
 	github.com/hashicorp/terraform-plugin-testing v1.10.0
 	github.com/katbyte/terrafmt v0.5.3
 	github.com/pavius/impi v0.0.3
-	github.com/pingidentity/identitycloud-go-client v0.3.0
+	github.com/pingidentity/identitycloud-go-client v0.3.1
 	github.com/sethvargo/go-retry v0.3.0
 	github.com/terraform-linters/tflint v0.51.1
 )
