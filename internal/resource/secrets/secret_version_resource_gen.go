@@ -37,8 +37,9 @@ func SecretVersionResource() resource.Resource {
 }
 
 type secretVersionResource struct {
-	apiClient   *client.APIClient
-	accessToken string
+	apiClient                 *client.APIClient
+	accessToken               *string
+	serviceAccountTokenSource *client.ServiceAccountTokenSource
 }
 
 func (r *secretVersionResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -57,6 +58,7 @@ func (r *secretVersionResource) Configure(_ context.Context, req resource.Config
 	}
 	r.apiClient = resourceConfig.ApiClient
 	r.accessToken = resourceConfig.AccessToken
+	r.serviceAccountTokenSource = resourceConfig.ServiceAccountConfig
 }
 
 type secretVersionResourceModel struct {
@@ -146,7 +148,7 @@ func (r *secretVersionResource) Create(ctx context.Context, req resource.CreateR
 	var err error
 	if data.Status.ValueString() == "DESTROYED" {
 		// Delete API call logic
-		apiUpdateRequest := r.apiClient.SecretsAPI.DeleteSecretVersion(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString(), data.VersionId.ValueString())
+		apiUpdateRequest := r.apiClient.SecretsAPI.DeleteSecretVersion(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString(), data.VersionId.ValueString())
 		responseData, httpResp, err = r.apiClient.SecretsAPI.DeleteSecretVersionExecute(apiUpdateRequest)
 		if err != nil {
 			providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while updating the secretVersion", err, httpResp)
@@ -156,7 +158,7 @@ func (r *secretVersionResource) Create(ctx context.Context, req resource.CreateR
 		// Update API call logic
 		clientData, diags := data.buildClientStruct()
 		resp.Diagnostics.Append(diags...)
-		apiUpdateRequest := r.apiClient.SecretsAPI.ChangeSecretVersion(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString(), data.VersionId.ValueString())
+		apiUpdateRequest := r.apiClient.SecretsAPI.ChangeSecretVersion(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString(), data.VersionId.ValueString())
 		apiUpdateRequest = apiUpdateRequest.Body(*clientData)
 		apiUpdateRequest = apiUpdateRequest.Action("changestatus")
 		responseData, httpResp, err = r.apiClient.SecretsAPI.ChangeSecretVersionExecute(apiUpdateRequest)
@@ -184,7 +186,7 @@ func (r *secretVersionResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	// Read API call logic
-	responseData, httpResp, err := r.apiClient.SecretsAPI.GetSecretVersion(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString(), data.VersionId.ValueString()).Execute()
+	responseData, httpResp, err := r.apiClient.SecretsAPI.GetSecretVersion(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString(), data.VersionId.ValueString()).Execute()
 	if err != nil {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			providererror.AddResourceNotFoundWarning(ctx, &resp.Diagnostics, "secretVersion", httpResp)
@@ -217,7 +219,7 @@ func (r *secretVersionResource) Update(ctx context.Context, req resource.UpdateR
 	var err error
 	if data.Status.ValueString() == "DESTROYED" {
 		// Delete API call logic
-		apiUpdateRequest := r.apiClient.SecretsAPI.DeleteSecretVersion(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString(), data.VersionId.ValueString())
+		apiUpdateRequest := r.apiClient.SecretsAPI.DeleteSecretVersion(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString(), data.VersionId.ValueString())
 		responseData, httpResp, err = r.apiClient.SecretsAPI.DeleteSecretVersionExecute(apiUpdateRequest)
 		if err != nil {
 			providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while updating the secretVersion", err, httpResp)
@@ -227,7 +229,7 @@ func (r *secretVersionResource) Update(ctx context.Context, req resource.UpdateR
 		// Update API call logic
 		clientData, diags := data.buildClientStruct()
 		resp.Diagnostics.Append(diags...)
-		apiUpdateRequest := r.apiClient.SecretsAPI.ChangeSecretVersion(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString(), data.VersionId.ValueString())
+		apiUpdateRequest := r.apiClient.SecretsAPI.ChangeSecretVersion(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString(), data.VersionId.ValueString())
 		apiUpdateRequest = apiUpdateRequest.Body(*clientData)
 		apiUpdateRequest = apiUpdateRequest.Action("changestatus")
 		responseData, httpResp, err = r.apiClient.SecretsAPI.ChangeSecretVersionExecute(apiUpdateRequest)

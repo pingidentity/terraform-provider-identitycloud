@@ -33,8 +33,9 @@ func CertificateSigningRequestExportResource() resource.Resource {
 }
 
 type certificateSigningRequestExportResource struct {
-	apiClient   *client.APIClient
-	accessToken string
+	apiClient                 *client.APIClient
+	accessToken               *string
+	serviceAccountTokenSource *client.ServiceAccountTokenSource
 }
 
 func (r *certificateSigningRequestExportResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -53,6 +54,7 @@ func (r *certificateSigningRequestExportResource) Configure(_ context.Context, r
 	}
 	r.apiClient = resourceConfig.ApiClient
 	r.accessToken = resourceConfig.AccessToken
+	r.serviceAccountTokenSource = resourceConfig.ServiceAccountConfig
 }
 
 type certificateSigningRequestExportResourceModel struct {
@@ -311,7 +313,7 @@ func (r *certificateSigningRequestExportResource) Create(ctx context.Context, re
 	// Create API call logic
 	clientData, diags := data.buildClientStruct()
 	resp.Diagnostics.Append(diags...)
-	apiCreateRequest := r.apiClient.CSRsAPI.CreateCertificateSigningRequest(auth.AuthContext(ctx, r.accessToken))
+	apiCreateRequest := r.apiClient.CSRsAPI.CreateCertificateSigningRequest(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource))
 	apiCreateRequest = apiCreateRequest.Body(*clientData)
 	responseData, httpResp, err := r.apiClient.CSRsAPI.CreateCertificateSigningRequestExecute(apiCreateRequest)
 	if err != nil {
@@ -337,7 +339,7 @@ func (r *certificateSigningRequestExportResource) Read(ctx context.Context, req 
 	}
 
 	// Read API call logic
-	responseData, httpResp, err := r.apiClient.CSRsAPI.GetCertificateSigningRequestById(auth.AuthContext(ctx, r.accessToken), data.Id.ValueString()).Execute()
+	responseData, httpResp, err := r.apiClient.CSRsAPI.GetCertificateSigningRequestById(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.Id.ValueString()).Execute()
 	if err != nil {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			providererror.AddResourceNotFoundWarning(ctx, &resp.Diagnostics, "certificateSigningRequest", httpResp)
@@ -371,7 +373,7 @@ func (r *certificateSigningRequestExportResource) Delete(ctx context.Context, re
 	}
 
 	// Delete API call logic
-	httpResp, err := r.apiClient.CSRsAPI.DeleteCertificateSigningRequestById(auth.AuthContext(ctx, r.accessToken), data.Id.ValueString()).Execute()
+	httpResp, err := r.apiClient.CSRsAPI.DeleteCertificateSigningRequestById(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.Id.ValueString()).Execute()
 	if err != nil && (httpResp == nil || httpResp.StatusCode != 404) {
 		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while deleting the certificateSigningRequest", err, httpResp)
 	}

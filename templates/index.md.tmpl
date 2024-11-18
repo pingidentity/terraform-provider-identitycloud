@@ -17,5 +17,10 @@ For information on obtaining an access token to use with this provider, see the 
 
 ### Required
 
-- `access_token` (String, Sensitive) Access token for the PingOne Advanced Identity Cloud Rest API. Default value can be set with the `PINGAIC_TF_ACCESS_TOKEN` environment variable.
 - `tenant_environment_fqdn` (String, Sensitive) The fully qualified domain name of the tenant environment. Default value can be set with the `PINGAIC_TF_TENANT_ENV_FQDN` environment variable.
+
+### Optional
+
+- `access_token` (String, Sensitive) Access token for the PingOne Advanced Identity Cloud Rest API. Default value can be set with the `PINGAIC_TF_ACCESS_TOKEN` environment variable. If `access_token` is provided, `service_account_id` and `service_account_private_key` should not be provided.
+- `service_account_id` (String, Sensitive) Service account ID for the PingOne Advanced Identity Cloud Rest API. The service account must have the following scopes: `fr:idc:certificate:*`, `fr:idc:content-security-policy:*`, `fr:idc:cookie-domain:*`, `fr:idc:custom-domain:*`, `fr:idc:esv:*`, `fr:idc:promotion:*`, `fr:idc:sso-cookie:*`. Default value can be set with the `PINGAIC_TF_SERVICE_ACCOUNT_ID` environment variable. If `service_account_id` and `service_account_private_key` are provided, `access_token` should not be provided.
+- `service_account_private_key` (String, Sensitive) Service account private key for the PingOne Advanced Identity Cloud Rest API. Default value can be set with the `PINGAIC_TF_SERVICE_ACCOUNT_PRIVATE_KEY` environment variable. If `service_account_id` and `service_account_private_key` are provided, `access_token` should not be provided.

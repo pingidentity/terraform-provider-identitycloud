@@ -35,8 +35,9 @@ func SecretResource() resource.Resource {
 }
 
 type secretResource struct {
-	apiClient   *client.APIClient
-	accessToken string
+	apiClient                 *client.APIClient
+	accessToken               *string
+	serviceAccountTokenSource *client.ServiceAccountTokenSource
 }
 
 func (r *secretResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -55,6 +56,7 @@ func (r *secretResource) Configure(_ context.Context, req resource.ConfigureRequ
 	}
 	r.apiClient = resourceConfig.ApiClient
 	r.accessToken = resourceConfig.AccessToken
+	r.serviceAccountTokenSource = resourceConfig.ServiceAccountConfig
 }
 
 type secretResourceModel struct {
@@ -214,7 +216,7 @@ func (r *secretResource) Create(ctx context.Context, req resource.CreateRequest,
 	// Create API call logic
 	clientData, diags := data.buildClientStruct()
 	resp.Diagnostics.Append(diags...)
-	apiCreateRequest := r.apiClient.SecretsAPI.CreateSecret(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString())
+	apiCreateRequest := r.apiClient.SecretsAPI.CreateSecret(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString())
 	apiCreateRequest = apiCreateRequest.Body(*clientData)
 	responseData, httpResp, err := r.apiClient.SecretsAPI.CreateSecretExecute(apiCreateRequest)
 	if err != nil {
@@ -240,7 +242,7 @@ func (r *secretResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	// Read API call logic
-	responseData, httpResp, err := r.apiClient.SecretsAPI.GetSecret(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString()).Execute()
+	responseData, httpResp, err := r.apiClient.SecretsAPI.GetSecret(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString()).Execute()
 	if err != nil {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			providererror.AddResourceNotFoundWarning(ctx, &resp.Diagnostics, "secret", httpResp)
@@ -273,7 +275,7 @@ func (r *secretResource) Update(ctx context.Context, req resource.UpdateRequest,
 		// Update description API call logic
 		clientData, diags := data.buildUpdateClientStruct()
 		resp.Diagnostics.Append(diags...)
-		apiUpdateRequest := r.apiClient.SecretsAPI.ActionSecret(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString())
+		apiUpdateRequest := r.apiClient.SecretsAPI.ActionSecret(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString())
 		apiUpdateRequest = apiUpdateRequest.Body(*clientData)
 		apiUpdateRequest = apiUpdateRequest.Action("setDescription")
 		httpResp, err := r.apiClient.SecretsAPI.ActionSecretExecute(apiUpdateRequest)
@@ -286,7 +288,7 @@ func (r *secretResource) Update(ctx context.Context, req resource.UpdateRequest,
 		// Create a new version of the secret
 		clientData, diags := data.buildNewVersionClientStruct()
 		resp.Diagnostics.Append(diags...)
-		apiVersionCreateRequest := r.apiClient.SecretsAPI.CreateSecretVersion(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString())
+		apiVersionCreateRequest := r.apiClient.SecretsAPI.CreateSecretVersion(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString())
 		apiVersionCreateRequest = apiVersionCreateRequest.Action("create")
 		apiVersionCreateRequest = apiVersionCreateRequest.Body(*clientData)
 		_, httpResp, err := r.apiClient.SecretsAPI.CreateSecretVersionExecute(apiVersionCreateRequest)
@@ -296,7 +298,7 @@ func (r *secretResource) Update(ctx context.Context, req resource.UpdateRequest,
 		}
 
 		// Read API call logic to get updated secret info
-		responseData, httpResp, err := r.apiClient.SecretsAPI.GetSecret(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString()).Execute()
+		responseData, httpResp, err := r.apiClient.SecretsAPI.GetSecret(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString()).Execute()
 		if err != nil {
 			providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while reading the secret", err, httpResp)
 			return
@@ -321,7 +323,7 @@ func (r *secretResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	}
 
 	// Delete API call logic
-	_, httpResp, err := r.apiClient.SecretsAPI.DeleteSecret(auth.AuthContext(ctx, r.accessToken), data.SecretId.ValueString()).Execute()
+	_, httpResp, err := r.apiClient.SecretsAPI.DeleteSecret(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString()).Execute()
 	if err != nil && (httpResp == nil || httpResp.StatusCode != 404) {
 		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while deleting the secret", err, httpResp)
 	}
