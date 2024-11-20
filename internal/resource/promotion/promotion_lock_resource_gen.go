@@ -4,7 +4,6 @@ package promotion
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"time"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	client "github.com/pingidentity/identitycloud-go-client/identitycloud"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/auth"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/providererror"
@@ -225,15 +223,16 @@ func (r *promotionLockResource) Create(ctx context.Context, req resource.CreateR
 	var httpResp *http.Response
 	var err error
 	finalErr := retry.Do(ctx, retries, func(ctx context.Context) error {
+		// The state of the lock may not be updated until a get request is run, so first request the state of the
+		// lock on each retry.
+		_, httpResp, err = r.apiClient.PromotionAPI.CheckLock(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource)).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
+		if err != nil {
+			return err
+		}
+
+		// Attempt to lock
 		_, httpResp, err = r.apiClient.PromotionAPI.LockExecute(apiCreateRequest)
 		if err != nil && httpResp != nil && httpResp.StatusCode == 409 {
-			defer httpResp.Body.Close()
-			body, bodyErr := io.ReadAll(httpResp.Body)
-			if bodyErr == nil {
-				tflog.Warn(ctx, "Environment lock failure, retryable error: "+err.Error()+", body: "+string(body))
-			} else {
-				tflog.Warn(ctx, "Environment lock failure, retryable error: "+err.Error())
-			}
 			return retry.RetryableError(err)
 		}
 		return err
@@ -319,15 +318,16 @@ func (r *promotionLockResource) Delete(ctx context.Context, req resource.DeleteR
 	var httpResp *http.Response
 	var err error
 	finalErr := retry.Do(ctx, retries, func(ctx context.Context) error {
+		// The state of the lock may not be updated until a get request is run, so first request the state of the
+		// lock on each retry.
+		_, httpResp, err = r.apiClient.PromotionAPI.CheckLock(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource)).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
+		if err != nil {
+			return err
+		}
+
+		// Attempt to unlock
 		_, httpResp, err = r.apiClient.PromotionAPI.Unlock(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.PromotionId.ValueString()).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
 		if err != nil && httpResp != nil && httpResp.StatusCode == 409 {
-			defer httpResp.Body.Close()
-			body, bodyErr := io.ReadAll(httpResp.Body)
-			if bodyErr == nil {
-				tflog.Warn(ctx, "Environment unlock failure, retryable error: "+err.Error()+", body: "+string(body))
-			} else {
-				tflog.Warn(ctx, "Environment unlock failure, retryable error: "+err.Error())
-			}
 			return retry.RetryableError(err)
 		}
 		return err
