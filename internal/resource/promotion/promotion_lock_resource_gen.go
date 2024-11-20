@@ -225,6 +225,14 @@ func (r *promotionLockResource) Create(ctx context.Context, req resource.CreateR
 	var httpResp *http.Response
 	var err error
 	finalErr := retry.Do(ctx, retries, func(ctx context.Context) error {
+		// The state of the lock may not be updated until a get request is run, so first request the state of the
+		// lock on each retry.
+		_, httpResp, err = r.apiClient.PromotionAPI.CheckLock(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource)).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
+		if err != nil {
+			return err
+		}
+
+		// Attempt to lock
 		_, httpResp, err = r.apiClient.PromotionAPI.LockExecute(apiCreateRequest)
 		if err != nil && httpResp != nil && httpResp.StatusCode == 409 {
 			defer httpResp.Body.Close()
@@ -319,6 +327,14 @@ func (r *promotionLockResource) Delete(ctx context.Context, req resource.DeleteR
 	var httpResp *http.Response
 	var err error
 	finalErr := retry.Do(ctx, retries, func(ctx context.Context) error {
+		// The state of the lock may not be updated until a get request is run, so first request the state of the
+		// lock on each retry.
+		_, httpResp, err = r.apiClient.PromotionAPI.CheckLock(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource)).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
+		if err != nil {
+			return err
+		}
+
+		// Attempt to unlock
 		_, httpResp, err = r.apiClient.PromotionAPI.Unlock(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.PromotionId.ValueString()).AcceptAPIVersion("protocol=1.0,resource=1.0").Execute()
 		if err != nil && httpResp != nil && httpResp.StatusCode == 409 {
 			defer httpResp.Body.Close()
