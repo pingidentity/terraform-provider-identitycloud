@@ -156,7 +156,7 @@ jobs:
         with:
           terraform_version: "1.4.*"
           terraform_wrapper: false
-      - run: make testaccpromotion
+      - run: make testacc
         env:
           TF_ACC: "1"
           PINGAIC_TF_SERVICE_ACCOUNT_ID: ${{ secrets.SERVICE_ACCOUNT_ID }}
