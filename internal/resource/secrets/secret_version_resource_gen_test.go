@@ -3,18 +3,47 @@
 package secrets_test
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/acctest"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/provider"
 )
 
 const secretVersionSecretId = "esv-secretversiontest"
 const secretVersionVersionId = "1"
+
+var computedSecretVersionId string
+
+func TestAccSecretVersion_RemovalDrift(t *testing.T) {
+	t.SkipNow()
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"identitycloud": providerserver.NewProtocol6WithError(provider.NewTestProvider()),
+		},
+		CheckDestroy: secret_CheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Create the resource with a minimal model
+				Config: secretVersion_MinimalHCLMultiple(),
+			},
+			{
+				// Delete the resource on the service, outside of terraform, verify that a non-empty plan is generated
+				PreConfig: func() {
+					secretVersion_Delete(t)
+				},
+				RefreshState:       true,
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
 
 func TestAccSecretVersion_MinimalMaximal(t *testing.T) {
 	resource.Test(t, resource.TestCase{
@@ -45,20 +74,51 @@ func TestAccSecretVersion_MinimalMaximal(t *testing.T) {
 			},
 			{
 				// Back to complete model
-				Config: secretVersion_CompleteHCL("DISABLED"),
+				Config: secretVersion_CompleteHCL("ENABLED"),
 				Check:  secretVersion_CheckComputedValuesComplete(),
+			},
+			{
+				// Test updating the status
+				Config: secretVersion_CompleteHCL("DISABLED"),
+				Check: resource.ComposeTestCheckFunc(
+					secretVersion_CheckComputedValuesComplete(),
+					getSecretVersionId(),
+				),
 			},
 			{
 				// Test importing the resource
 				Config:                               secretVersion_CompleteHCL("DISABLED"),
 				ResourceName:                         "identitycloud_secret_version.example",
-				ImportStateId:                        secretVersionSecretId + "/" + secretVersionVersionId,
+				ImportStateId:                        secretVersionSecretId + "/" + computedSecretVersionId,
 				ImportStateVerifyIdentifierAttribute: "version_id",
 				ImportState:                          true,
 				ImportStateVerify:                    true,
 			},
 		},
 	})
+}
+
+// Minimal HCL with only required values set
+func secretVersion_MinimalHCLMultiple() string {
+	return fmt.Sprintf(`
+resource "identitycloud_secret" "example" {
+  secret_id = "%s"
+  encoding = "generic"
+  use_in_placeholders = false
+  value_base64 = base64encode("examplesecret")
+}
+
+resource "identitycloud_secret_version" "example" {
+  secret_id = identitycloud_secret.example.secret_id
+  value_base64 = base64encode("examplesecretupdated")
+}
+
+resource "identitycloud_secret_version" "exampletwo" {
+depends_on = [identitycloud_secret_version.example]
+  secret_id = identitycloud_secret.example.secret_id
+  value_base64 = base64encode("examplesecretupdatedagain")
+}
+`, secretVersionSecretId)
 }
 
 // Minimal HCL with only required values set
@@ -73,7 +133,7 @@ resource "identitycloud_secret" "example" {
 
 resource "identitycloud_secret_version" "example" {
   secret_id = identitycloud_secret.example.secret_id
-  version_id = identitycloud_secret.example.active_version
+  value_base64 = base64encode("examplesecretupdated")
 }
 `, secretVersionSecretId)
 }
@@ -85,14 +145,20 @@ resource "identitycloud_secret" "example" {
 	secret_id = "%s"
 	encoding = "generic"
 	use_in_placeholders = false
-	value_base64 = base64encode("examplesecretupdated")
+  value_base64 = base64encode("examplesecret")
   }
   
 resource "identitycloud_secret_version" "example" {
 	secret_id = identitycloud_secret.example.secret_id
-	version_id = "1"
+  value_base64 = base64encode("examplesecretanother")
 	status = "%s"
   }
+
+resource "identitycloud_secret_version" "exampletwo" {
+depends_on = [identitycloud_secret_version.example]
+  secret_id = identitycloud_secret.example.secret_id
+  value_base64 = base64encode("examplesecretupdatedagain")
+}
 `, secretVersionSecretId, status)
 }
 
@@ -100,6 +166,7 @@ resource "identitycloud_secret_version" "example" {
 func secretVersion_CheckComputedValuesMinimal() resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
 		resource.TestCheckResourceAttrSet("identitycloud_secret_version.example", "create_date"),
+		resource.TestCheckResourceAttrSet("identitycloud_secret_version.example", "version_id"),
 		resource.TestCheckResourceAttr("identitycloud_secret_version.example", "loaded", "false"),
 		resource.TestCheckResourceAttr("identitycloud_secret_version.example", "status", "ENABLED"),
 	)
@@ -109,6 +176,41 @@ func secretVersion_CheckComputedValuesMinimal() resource.TestCheckFunc {
 func secretVersion_CheckComputedValuesComplete() resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
 		resource.TestCheckResourceAttrSet("identitycloud_secret_version.example", "create_date"),
+		resource.TestCheckResourceAttrSet("identitycloud_secret_version.example", "version_id"),
 		resource.TestCheckResourceAttr("identitycloud_secret_version.example", "loaded", "false"),
 	)
+}
+
+// Get the secret version id from terraform state
+func getSecretVersionId() resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		ms := s.RootModule()
+		rs, ok := ms.Resources["identitycloud_secret_version.example"]
+		if !ok {
+			return errors.New("Not found: identitycloud_secret_version.example")
+		}
+
+		is := rs.Primary
+		if is == nil {
+			return errors.New("No primary instance found")
+		}
+
+		v, ok := is.Attributes["version_id"]
+
+		if !ok {
+			return errors.New("No id attribute found")
+		}
+
+		computedSecretVersionId = v
+		return nil
+	}
+}
+
+// Delete the resource
+func secretVersion_Delete(t *testing.T) {
+	testClient := acctest.Client()
+	_, _, err := testClient.SecretsAPI.DeleteSecretVersion(acctest.AuthContext(), secretVersionSecretId, secretVersionVersionId).Execute()
+	if err != nil {
+		t.Fatalf("Failed to delete config: %v", err)
+	}
 }

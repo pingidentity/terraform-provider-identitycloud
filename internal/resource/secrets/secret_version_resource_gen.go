@@ -5,7 +5,6 @@ package secrets
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -62,28 +61,43 @@ func (r *secretVersionResource) Configure(_ context.Context, req resource.Config
 }
 
 type secretVersionResourceModel struct {
-	CreateDate types.String `tfsdk:"create_date"`
-	Loaded     types.Bool   `tfsdk:"loaded"`
-	SecretId   types.String `tfsdk:"secret_id"`
-	Status     types.String `tfsdk:"status"`
-	VersionId  types.String `tfsdk:"version_id"`
+	CreateDate  types.String `tfsdk:"create_date"`
+	Loaded      types.Bool   `tfsdk:"loaded"`
+	ValueBase64 types.String `tfsdk:"value_base64"`
+	SecretId    types.String `tfsdk:"secret_id"`
+	Status      types.String `tfsdk:"status"`
+	VersionId   types.String `tfsdk:"version_id"`
 }
 
 func (r *secretVersionResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Resource to manage the status of a version of a secret.",
+		Description: "Resource to create and manage a version of an existing secret. Note that the latest version of a secret cannot be deleted by this resource.",
 		Attributes: map[string]schema.Attribute{
 			"create_date": schema.StringAttribute{
 				Description: "The date the secret version was created",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"loaded": schema.BoolAttribute{
 				Description: "Whether the secret version is loaded.",
 				Computed:    true,
 			},
+			"value_base64": schema.StringAttribute{
+				Description: "Base64 encoded value of the secret version. If you wish to change this value, instead create a new `identitycloud_secret_version` resource to create a new version of this secret. Otherwise, changing this value will require replacement of the resource.",
+				Required:    true,
+				Sensitive:   true,
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(regexp.MustCompile("^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"), ""),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 			"secret_id": schema.StringAttribute{
 				Required:    true,
-				Description: "ID of the secret",
+				Description: "ID of the secret. Changing this value will require replacement of the resource.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -95,29 +109,36 @@ func (r *secretVersionResource) Schema(ctx context.Context, req resource.SchemaR
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("ENABLED"),
-				Description: "The status of the secret version. Either `DISABLED`, `ENABLED`, or `DESTROYED`.",
+				Description: "The status of the secret version. Either `DISABLED` or `ENABLED`. Default value is `ENABLED`. Destroying a secret version will set its status to `DESTROYED`. The latest secret version cannot be disabled.",
 				Validators: []validator.String{
-					stringvalidator.OneOf("DISABLED", "ENABLED", "DESTROYED"),
+					stringvalidator.OneOf("DISABLED", "ENABLED"),
 				},
 			},
 			"version_id": schema.StringAttribute{
-				Required:    true,
+				Computed:    true,
 				Description: "ID of the secret version. Will match the pattern `^latest$|^[0-9]+$`.",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(regexp.MustCompile("^latest$|^[0-9]+$"), ""),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 		},
 	}
 }
 
-func (model *secretVersionResourceModel) buildClientStruct() (*client.EsvSecretVersionStatusRequest, diag.Diagnostics) {
+func (model *secretVersionResourceModel) buildUpdateStatusClientStruct() (*client.EsvSecretVersionStatusRequest, diag.Diagnostics) {
 	result := &client.EsvSecretVersionStatusRequest{}
 	// value_base64
 	result.Status = model.Status.ValueString()
+	return result, nil
+}
+
+func (model *secretVersionResourceModel) buildCreateClientStruct() (*client.EsvSecretVersionCreateRequest, diag.Diagnostics) {
+	result := &client.EsvSecretVersionCreateRequest{}
+	// value_base64
+	result.ValueBase64 = model.ValueBase64.ValueString()
 	return result, nil
 }
 
@@ -143,27 +164,31 @@ func (r *secretVersionResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	var responseData *client.EsvSecretVersionResponse
-	var httpResp *http.Response
-	var err error
-	if data.Status.ValueString() == "DESTROYED" {
-		// Delete API call logic
-		apiUpdateRequest := r.apiClient.SecretsAPI.DeleteSecretVersion(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString(), data.VersionId.ValueString())
-		responseData, httpResp, err = r.apiClient.SecretsAPI.DeleteSecretVersionExecute(apiUpdateRequest)
-		if err != nil {
-			providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while updating the secretVersion", err, httpResp)
-			return
-		}
-	} else {
+	shouldDisable := data.Status.ValueString() == "DISABLED"
+
+	// Create a new version of the secret
+	clientData, diags := data.buildCreateClientStruct()
+	resp.Diagnostics.Append(diags...)
+	apiVersionCreateRequest := r.apiClient.SecretsAPI.CreateSecretVersion(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString())
+	apiVersionCreateRequest = apiVersionCreateRequest.Action("create")
+	apiVersionCreateRequest = apiVersionCreateRequest.Body(*clientData)
+	responseData, httpResp, err := r.apiClient.SecretsAPI.CreateSecretVersionExecute(apiVersionCreateRequest)
+	if err != nil {
+		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while creating a new secret version", err, httpResp)
+		return
+	}
+
+	versionId := responseData.Version
+	if shouldDisable && !resp.Diagnostics.HasError() {
 		// Update API call logic
-		clientData, diags := data.buildClientStruct()
+		clientData, diags := data.buildUpdateStatusClientStruct()
 		resp.Diagnostics.Append(diags...)
-		apiUpdateRequest := r.apiClient.SecretsAPI.ChangeSecretVersion(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString(), data.VersionId.ValueString())
+		apiUpdateRequest := r.apiClient.SecretsAPI.ChangeSecretVersion(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString(), versionId)
 		apiUpdateRequest = apiUpdateRequest.Body(*clientData)
 		apiUpdateRequest = apiUpdateRequest.Action("changestatus")
 		responseData, httpResp, err = r.apiClient.SecretsAPI.ChangeSecretVersionExecute(apiUpdateRequest)
 		if err != nil {
-			providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while updating the secretVersion", err, httpResp)
+			providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while updating the secretVersion status", err, httpResp)
 			return
 		}
 	}
@@ -214,29 +239,16 @@ func (r *secretVersionResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	var responseData *client.EsvSecretVersionResponse
-	var httpResp *http.Response
-	var err error
-	if data.Status.ValueString() == "DESTROYED" {
-		// Delete API call logic
-		apiUpdateRequest := r.apiClient.SecretsAPI.DeleteSecretVersion(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString(), data.VersionId.ValueString())
-		responseData, httpResp, err = r.apiClient.SecretsAPI.DeleteSecretVersionExecute(apiUpdateRequest)
-		if err != nil {
-			providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while updating the secretVersion", err, httpResp)
-			return
-		}
-	} else {
-		// Update API call logic
-		clientData, diags := data.buildClientStruct()
-		resp.Diagnostics.Append(diags...)
-		apiUpdateRequest := r.apiClient.SecretsAPI.ChangeSecretVersion(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString(), data.VersionId.ValueString())
-		apiUpdateRequest = apiUpdateRequest.Body(*clientData)
-		apiUpdateRequest = apiUpdateRequest.Action("changestatus")
-		responseData, httpResp, err = r.apiClient.SecretsAPI.ChangeSecretVersionExecute(apiUpdateRequest)
-		if err != nil {
-			providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while updating the secretVersion", err, httpResp)
-			return
-		}
+	// Update API call logic
+	clientData, diags := data.buildUpdateStatusClientStruct()
+	resp.Diagnostics.Append(diags...)
+	apiUpdateRequest := r.apiClient.SecretsAPI.ChangeSecretVersion(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString(), data.VersionId.ValueString())
+	apiUpdateRequest = apiUpdateRequest.Body(*clientData)
+	apiUpdateRequest = apiUpdateRequest.Action("changestatus")
+	responseData, httpResp, err := r.apiClient.SecretsAPI.ChangeSecretVersionExecute(apiUpdateRequest)
+	if err != nil {
+		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while updating the secretVersion", err, httpResp)
+		return
 	}
 
 	// Read response into the model
@@ -256,10 +268,18 @@ func (r *secretVersionResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	// This resource will just be removed from terraform state
-	resp.Diagnostics.AddWarning(providererror.DeletedNotRemovedWarning,
-		fmt.Sprintf("Secret version '%s' for secret '%s' still exists in the tenant, but has been removed from terraform state.",
-			data.VersionId.ValueString(), data.SecretId.ValueString()))
+	// Attempt to delete, if it fails due to being the latest secret version, warn the user
+	apiDeleteRequest := r.apiClient.SecretsAPI.DeleteSecretVersion(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString(), data.VersionId.ValueString())
+	_, httpResp, err := r.apiClient.SecretsAPI.DeleteSecretVersionExecute(apiDeleteRequest)
+	if err != nil {
+		if httpResp != nil && httpResp.StatusCode == 403 {
+			resp.Diagnostics.AddWarning(providererror.DeletedNotRemovedWarning,
+				fmt.Sprintf("The latest secret version for a secret cannot be destroyed. Secret version '%s' for secret '%s' still exists in the tenant, but has been removed from terraform state.",
+					data.VersionId.ValueString(), data.SecretId.ValueString()))
+		} else if httpResp == nil || httpResp.StatusCode != 404 {
+			providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while deleting the secret", err, httpResp)
+		}
+	}
 }
 
 func (r *secretVersionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
