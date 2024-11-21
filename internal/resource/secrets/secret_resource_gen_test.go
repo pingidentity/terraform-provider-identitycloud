@@ -51,7 +51,7 @@ func TestAccSecret_MinimalMaximal(t *testing.T) {
 			{
 				// Create the resource with a minimal model
 				Config: secret_MinimalHCL(),
-				Check:  secret_CheckComputedValuesMinimal("1"),
+				Check:  secret_CheckComputedValuesMinimal(),
 			},
 			{
 				// Delete the minimal model
@@ -61,17 +61,17 @@ func TestAccSecret_MinimalMaximal(t *testing.T) {
 			{
 				// Re-create with a complete model
 				Config: secret_CompleteHCL(),
-				Check:  secret_CheckComputedValuesComplete("1"),
+				Check:  secret_CheckComputedValuesComplete(),
 			},
 			{
 				// Back to minimal model
 				Config: secret_MinimalHCL(),
-				Check:  secret_CheckComputedValuesMinimal("2"),
+				Check:  secret_CheckComputedValuesMinimal(),
 			},
 			{
 				// Back to complete model
 				Config: secret_CompleteHCL(),
-				Check:  secret_CheckComputedValuesComplete("3"),
+				Check:  secret_CheckComputedValuesComplete(),
 			},
 			{
 				// Test importing the resource
@@ -114,27 +114,27 @@ resource "identitycloud_secret" "example" {
 }
 
 // Validate any computed values when applying minimal HCL
-func secret_CheckComputedValuesMinimal(activeVersion string) resource.TestCheckFunc {
+func secret_CheckComputedValuesMinimal() resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
-		resource.TestCheckResourceAttr("identitycloud_secret.example", "active_version", activeVersion),
+		resource.TestCheckResourceAttr("identitycloud_secret.example", "active_version", "1"),
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "description", ""),
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "id", secretSecretId),
 		resource.TestCheckResourceAttrSet("identitycloud_secret.example", "last_change_date"),
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "last_changed_by", "tiered-tf-testing"),
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "loaded", "true"),
-		resource.TestCheckResourceAttr("identitycloud_secret.example", "loaded_version", activeVersion),
+		resource.TestCheckResourceAttr("identitycloud_secret.example", "loaded_version", "1"),
 	)
 }
 
 // Validate any computed values when applying complete HCL
-func secret_CheckComputedValuesComplete(activeVersion string) resource.TestCheckFunc {
+func secret_CheckComputedValuesComplete() resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
-		resource.TestCheckResourceAttr("identitycloud_secret.example", "active_version", activeVersion),
+		resource.TestCheckResourceAttr("identitycloud_secret.example", "active_version", "1"),
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "id", secretSecretId),
 		resource.TestCheckResourceAttrSet("identitycloud_secret.example", "last_change_date"),
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "last_changed_by", "tiered-tf-testing"),
 		resource.TestCheckResourceAttr("identitycloud_secret.example", "loaded", "true"),
-		resource.TestCheckResourceAttr("identitycloud_secret.example", "loaded_version", activeVersion),
+		resource.TestCheckResourceAttr("identitycloud_secret.example", "loaded_version", "1"),
 	)
 }
 

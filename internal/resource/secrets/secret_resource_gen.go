@@ -143,11 +143,14 @@ func (r *secretResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				},
 			},
 			"value_base64": schema.StringAttribute{
-				Description: "Base64 encoded value of the secret. Changing this value will create a new version of the secret.",
+				Description: "Base64 encoded value of the secret. If you wish to change this value, use the `identitycloud_secret_version` resource to create a new version of this secret. Otherwise, changing this value will require replacement of the resource.",
 				Required:    true,
 				Sensitive:   true,
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(regexp.MustCompile("^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"), ""),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 		},
@@ -171,13 +174,6 @@ func (model *secretResourceModel) buildUpdateClientStruct() (*client.EsvSetDescr
 	result := &client.EsvSetDescriptionRequest{}
 	// description
 	result.Description = model.Description.ValueString()
-	return result, nil
-}
-
-func (model *secretResourceModel) buildNewVersionClientStruct() (*client.EsvSecretVersionCreateRequest, diag.Diagnostics) {
-	result := &client.EsvSecretVersionCreateRequest{}
-	// value_base64
-	result.ValueBase64 = model.ValueBase64.ValueString()
 	return result, nil
 }
 
@@ -283,29 +279,6 @@ func (r *secretResource) Update(ctx context.Context, req resource.UpdateRequest,
 			providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while updating the secret", err, httpResp)
 			return
 		}
-	}
-	if !data.ValueBase64.Equal(state.ValueBase64) {
-		// Create a new version of the secret
-		clientData, diags := data.buildNewVersionClientStruct()
-		resp.Diagnostics.Append(diags...)
-		apiVersionCreateRequest := r.apiClient.SecretsAPI.CreateSecretVersion(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString())
-		apiVersionCreateRequest = apiVersionCreateRequest.Action("create")
-		apiVersionCreateRequest = apiVersionCreateRequest.Body(*clientData)
-		_, httpResp, err := r.apiClient.SecretsAPI.CreateSecretVersionExecute(apiVersionCreateRequest)
-		if err != nil {
-			providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while creating a new secret version", err, httpResp)
-			return
-		}
-
-		// Read API call logic to get updated secret info
-		responseData, httpResp, err := r.apiClient.SecretsAPI.GetSecret(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString()).Execute()
-		if err != nil {
-			providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while reading the secret", err, httpResp)
-			return
-		}
-
-		// Read response into the model
-		resp.Diagnostics.Append(data.readClientResponse(responseData)...)
 	}
 
 	// Save updated data into Terraform state
