@@ -3,14 +3,12 @@
 package secrets_test
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/acctest"
 	"github.com/pingidentity/terraform-provider-identitycloud/internal/provider"
 )
@@ -18,10 +16,7 @@ import (
 const secretVersionSecretId = "esv-secretversiontest"
 const secretVersionVersionId = "1"
 
-var computedSecretVersionId string
-
 func TestAccSecretVersion_RemovalDrift(t *testing.T) {
-	t.SkipNow()
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.ConfigurationPreCheck(t) },
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -80,19 +75,18 @@ func TestAccSecretVersion_MinimalMaximal(t *testing.T) {
 			{
 				// Test updating the status
 				Config: secretVersion_CompleteHCL("DISABLED"),
-				Check: resource.ComposeTestCheckFunc(
-					secretVersion_CheckComputedValuesComplete(),
-					getSecretVersionId(),
-				),
+				Check:  secretVersion_CheckComputedValuesComplete(),
 			},
 			{
 				// Test importing the resource
 				Config:                               secretVersion_CompleteHCL("DISABLED"),
-				ResourceName:                         "identitycloud_secret_version.example",
-				ImportStateId:                        secretVersionSecretId + "/" + computedSecretVersionId,
+				ResourceName:                         "identitycloud_secret_version.exampletwo",
+				ImportStateId:                        secretVersionSecretId + "/5",
 				ImportStateVerifyIdentifierAttribute: "version_id",
 				ImportState:                          true,
 				ImportStateVerify:                    true,
+				// The value of the secret can't be imported
+				ImportStateVerifyIgnore: []string{"value_base64"},
 			},
 		},
 	})
@@ -179,31 +173,6 @@ func secretVersion_CheckComputedValuesComplete() resource.TestCheckFunc {
 		resource.TestCheckResourceAttrSet("identitycloud_secret_version.example", "version_id"),
 		resource.TestCheckResourceAttr("identitycloud_secret_version.example", "loaded", "false"),
 	)
-}
-
-// Get the secret version id from terraform state
-func getSecretVersionId() resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		ms := s.RootModule()
-		rs, ok := ms.Resources["identitycloud_secret_version.example"]
-		if !ok {
-			return errors.New("Not found: identitycloud_secret_version.example")
-		}
-
-		is := rs.Primary
-		if is == nil {
-			return errors.New("No primary instance found")
-		}
-
-		v, ok := is.Attributes["version_id"]
-
-		if !ok {
-			return errors.New("No id attribute found")
-		}
-
-		computedSecretVersionId = v
-		return nil
-	}
 }
 
 // Delete the resource
