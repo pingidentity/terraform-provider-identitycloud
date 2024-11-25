@@ -112,6 +112,10 @@ depends_on = [identitycloud_secret_version.example]
   secret_id = identitycloud_secret.example.secret_id
   value_base64 = base64encode("examplesecretupdatedagain")
 }
+
+data "identitycloud_secret_versions" "example" {
+  secret_id = identitycloud_secret_version.exampletwo.secret_id
+}
 `, secretVersionSecretId)
 }
 
@@ -128,6 +132,10 @@ resource "identitycloud_secret" "example" {
 resource "identitycloud_secret_version" "example" {
   secret_id = identitycloud_secret.example.secret_id
   value_base64 = base64encode("examplesecretupdated")
+}
+
+data "identitycloud_secret_versions" "example" {
+  secret_id = identitycloud_secret_version.example.secret_id
 }
 `, secretVersionSecretId)
 }
@@ -153,6 +161,10 @@ depends_on = [identitycloud_secret_version.example]
   secret_id = identitycloud_secret.example.secret_id
   value_base64 = base64encode("examplesecretupdatedagain")
 }
+
+data "identitycloud_secret_versions" "example" {
+  secret_id = identitycloud_secret_version.exampletwo.secret_id
+}
 `, secretVersionSecretId, status)
 }
 
@@ -163,6 +175,7 @@ func secretVersion_CheckComputedValuesMinimal() resource.TestCheckFunc {
 		resource.TestCheckResourceAttrSet("identitycloud_secret_version.example", "version_id"),
 		resource.TestCheckResourceAttr("identitycloud_secret_version.example", "loaded", "false"),
 		resource.TestCheckResourceAttr("identitycloud_secret_version.example", "status", "ENABLED"),
+		resource.TestCheckResourceAttr("data.identitycloud_secret_versions.example", "secret_versions.0.loaded", "false"),
 	)
 }
 
@@ -172,6 +185,7 @@ func secretVersion_CheckComputedValuesComplete() resource.TestCheckFunc {
 		resource.TestCheckResourceAttrSet("identitycloud_secret_version.example", "create_date"),
 		resource.TestCheckResourceAttrSet("identitycloud_secret_version.example", "version_id"),
 		resource.TestCheckResourceAttr("identitycloud_secret_version.example", "loaded", "false"),
+		resource.TestCheckResourceAttr("data.identitycloud_secret_versions.example", "secret_versions.0.loaded", "false"),
 	)
 }
 

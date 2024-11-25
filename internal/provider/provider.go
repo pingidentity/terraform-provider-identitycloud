@@ -221,6 +221,7 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 func (p *identityCloudProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		promotion.PromotionLockDataSource,
+		secrets.SecretVersionsDataSource,
 	}
 }
 
