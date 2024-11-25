@@ -1,0 +1,1 @@
+terraform import identitycloud_secret_version.example "secret_id/version_id"

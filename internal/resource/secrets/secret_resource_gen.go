@@ -143,8 +143,9 @@ func (r *secretResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				},
 			},
 			"value_base64": schema.StringAttribute{
-				Description: "Base64 encoded value of the secret. Changing this value requires replacement of the resource.",
+				Description: "Base64 encoded value of the secret. If you wish to change this value, use the `identitycloud_secret_version` resource to create a new version of this secret. Otherwise, changing this value will require replacement of the resource.",
 				Required:    true,
+				Sensitive:   true,
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(regexp.MustCompile("^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"), ""),
 				},
@@ -256,24 +257,28 @@ func (r *secretResource) Read(ctx context.Context, req resource.ReadRequest, res
 }
 
 func (r *secretResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data secretResourceModel
+	var data, state secretResourceModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Update API call logic
-	clientData, diags := data.buildUpdateClientStruct()
-	resp.Diagnostics.Append(diags...)
-	apiUpdateRequest := r.apiClient.SecretsAPI.ActionSecret(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString())
-	apiUpdateRequest = apiUpdateRequest.Body(*clientData)
-	httpResp, err := r.apiClient.SecretsAPI.ActionSecretExecute(apiUpdateRequest)
-	if err != nil {
-		providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while updating the secret", err, httpResp)
-		return
+	if !data.Description.Equal(state.Description) {
+		// Update description API call logic
+		clientData, diags := data.buildUpdateClientStruct()
+		resp.Diagnostics.Append(diags...)
+		apiUpdateRequest := r.apiClient.SecretsAPI.ActionSecret(auth.AuthContext(ctx, r.accessToken, r.serviceAccountTokenSource), data.SecretId.ValueString())
+		apiUpdateRequest = apiUpdateRequest.Body(*clientData)
+		apiUpdateRequest = apiUpdateRequest.Action("setDescription")
+		httpResp, err := r.apiClient.SecretsAPI.ActionSecretExecute(apiUpdateRequest)
+		if err != nil {
+			providererror.ReportHttpError(ctx, &resp.Diagnostics, "An error occurred while updating the secret", err, httpResp)
+			return
+		}
 	}
 
 	// Save updated data into Terraform state

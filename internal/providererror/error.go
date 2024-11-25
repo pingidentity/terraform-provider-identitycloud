@@ -2,7 +2,8 @@ package providererror
 
 const (
 	// Common provider error summaries
-	InvalidProviderConfiguration = "Invalid provider configuration"
-	AicAPIError                  = "Advanced Identity Cloud API error"
-	InternalProviderError        = "Internal provider error"
+	InvalidProviderConfigurationError = "Invalid provider configuration"
+	AicAPIError                       = "Advanced Identity Cloud API error"
+	InternalProviderError             = "Internal provider error"
+	DeletedNotRemovedWarning          = "Resource removed from terraform state but not deleted from the service"
 )

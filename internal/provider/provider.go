@@ -112,7 +112,7 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 
 	if envFqdn == "" {
 		resp.Diagnostics.AddAttributeError(path.Root("tenant_environment_fqdn"),
-			providererror.InvalidProviderConfiguration,
+			providererror.InvalidProviderConfigurationError,
 			"tenant_environment_fqdn provider attribute is required. If not set in the provider configuration, it can be set with the `PINGAIC_TF_TENANT_ENV_FQDN` environment variable.")
 	} else {
 		// Ensure the the FQDN can be parsed by url.Parse
@@ -120,7 +120,7 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 		if err != nil {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("tenant_environment_fqdn"),
-				providererror.InvalidProviderConfiguration,
+				providererror.InvalidProviderConfigurationError,
 				fmt.Sprintf("Invalid URL Format for FQDN '%s': %s", envFqdn, err.Error()),
 			)
 		}
@@ -160,11 +160,13 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 
 	// Ensure either a specific access token or the two service account attributes are provided
 	if accessToken == nil && (serviceAccountId == nil || serviceAccountPrivateKey == nil) {
-		resp.Diagnostics.AddError(providererror.InvalidProviderConfiguration, "Either `access_token` or both `service_account_id` and `service_account_private_key` must be provided. If not set in the provider configuration, they can be set with the `PINGAIC_TF_ACCESS_TOKEN`, `PINGAIC_TF_SERVICE_ACCOUNT_ID`, and `PINGAIC_TF_SERVICE_ACCOUNT_PRIVATE_KEY` environment variables, respectively.")
+		resp.Diagnostics.AddError(providererror.InvalidProviderConfigurationError,
+			"Either `access_token` or both `service_account_id` and `service_account_private_key` must be provided. If not set in the provider configuration, they can be set with the `PINGAIC_TF_ACCESS_TOKEN`, `PINGAIC_TF_SERVICE_ACCOUNT_ID`, and `PINGAIC_TF_SERVICE_ACCOUNT_PRIVATE_KEY` environment variables, respectively.")
 	}
 
 	if accessToken != nil && (serviceAccountId != nil || serviceAccountPrivateKey != nil) {
-		resp.Diagnostics.AddError(providererror.InvalidProviderConfiguration, "`access_token` should not be provided with either `service_account_id` or `service_account_private_key`. If not set in the provider configuration, they can be set with the `PINGAIC_TF_ACCESS_TOKEN`, `PINGAIC_TF_SERVICE_ACCOUNT_ID`, and `PINGAIC_TF_SERVICE_ACCOUNT_PRIVATE_KEY` environment variables, respectively.")
+		resp.Diagnostics.AddError(providererror.InvalidProviderConfigurationError,
+			"`access_token` should not be provided with either `service_account_id` or `service_account_private_key`. If not set in the provider configuration, they can be set with the `PINGAIC_TF_ACCESS_TOKEN`, `PINGAIC_TF_SERVICE_ACCOUNT_ID`, and `PINGAIC_TF_SERVICE_ACCOUNT_PRIVATE_KEY` environment variables, respectively.")
 	}
 
 	if resp.Diagnostics.HasError() {
@@ -219,6 +221,7 @@ func (p *identityCloudProvider) Configure(ctx context.Context, req provider.Conf
 func (p *identityCloudProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		promotion.PromotionLockDataSource,
+		secrets.SecretVersionsDataSource,
 	}
 }
 
@@ -235,6 +238,7 @@ func (p *identityCloudProvider) Resources(_ context.Context) []func() resource.R
 		customdomains.CustomDomainVerifyResource,
 		promotion.PromotionLockResource,
 		secrets.SecretResource,
+		secrets.SecretVersionResource,
 		ssocookie.SsoCookieResource,
 		variable.VariableResource,
 	}
