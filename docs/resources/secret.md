@@ -9,7 +9,7 @@ description: |-
 
 Resource to create and manage a secret.
 
-The statuses of individual versions of a secret should be managed with the `identitycloud_secret_version` resource.
+To create or manage the status of individual versions of a secret, use the `identitycloud_secret_version` resource. Changing the `value_base64` of this resource will result in replacement of the entire secret.
 
 ## Example Usage
 

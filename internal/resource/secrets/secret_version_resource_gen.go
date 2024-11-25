@@ -71,7 +71,7 @@ type secretVersionResourceModel struct {
 
 func (r *secretVersionResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Resource to create and manage a version of an existing secret. Note that the latest version of a secret cannot be deleted by this resource.",
+		Description: "Resource to create and manage a version of an existing secret.",
 		Attributes: map[string]schema.Attribute{
 			"create_date": schema.StringAttribute{
 				Description: "The date the secret version was created",
