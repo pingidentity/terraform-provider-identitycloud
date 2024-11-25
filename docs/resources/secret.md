@@ -31,7 +31,7 @@ resource "identitycloud_secret" "example" {
 - `encoding` (String) Type of base64 encoding used by the secret. Changing this value requires replacement of the resource. Supported values are `generic`, `pem`, `base64hmac`, `base64aes`.
 - `secret_id` (String) ID of the secret. Must match the regex pattern `^esv-[a-z0-9_-]{1,124}$`.
 - `use_in_placeholders` (Boolean) Whether the secret is used in placeholders. Changing this value requires replacement of the resource.
-- `value_base64` (String, Sensitive) Base64 encoded value of the secret. Changing this value will create a new version of the secret.
+- `value_base64` (String, Sensitive) Base64 encoded value of the secret. If you wish to change this value, use the `identitycloud_secret_version` resource to create a new version of this secret. Otherwise, changing this value will require replacement of the resource.
 
 ### Optional
 

@@ -3,12 +3,12 @@
 page_title: "identitycloud_secret_version Resource - terraform-provider-identitycloud"
 subcategory: ""
 description: |-
-  Resource to manage the status of a version of a secret.
+  Resource to create and manage a version of an existing secret. Note that the latest version of a secret cannot be deleted by this resource.
 ---
 
 # identitycloud_secret_version (Resource)
 
-Resource to manage the status of a version of a secret.
+Resource to create and manage a version of an existing secret. Note that the latest version of a secret cannot be deleted by this resource.
 
 ## Example Usage
 
@@ -32,17 +32,18 @@ resource "identitycloud_secret_version" "example" {
 
 ### Required
 
-- `secret_id` (String) ID of the secret
-- `version_id` (String) ID of the secret version. Will match the pattern `^latest$|^[0-9]+$`.
+- `secret_id` (String) ID of the secret. Changing this value will require replacement of the resource.
+- `value_base64` (String, Sensitive) Base64 encoded value of the secret version. If you wish to change this value, instead create a new `identitycloud_secret_version` resource to create a new version of this secret. Otherwise, changing this value will require replacement of the resource.
 
 ### Optional
 
-- `status` (String) The status of the secret version. Either `DISABLED`, `ENABLED`, or `DESTROYED`.
+- `status` (String) The status of the secret version. Either `DISABLED` or `ENABLED`. Default value is `ENABLED`. Destroying a secret version will set its status to `DESTROYED`. The latest secret version cannot be disabled.
 
 ### Read-Only
 
 - `create_date` (String) The date the secret version was created
 - `loaded` (Boolean) Whether the secret version is loaded.
+- `version_id` (String) ID of the secret version. Will match the pattern `^latest$|^[0-9]+$`.
 
 ## Import
 

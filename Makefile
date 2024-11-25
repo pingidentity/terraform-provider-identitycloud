@@ -28,7 +28,9 @@ testaccpromotion:
 testaccfolder:
 	TF_ACC=1 go test ./internal/resource/${ACC_TEST_FOLDER}... -timeout 10m -v -count=1
 
-devcheck: install golangcilint generate tfproviderlint tflint terrafmtlint importfmtlint testacc
+devchecknotest: install golangcilint generate tfproviderlint tflint terrafmtlint importfmtlint
+
+devcheck: devchecknotest testacc
 
 golangcilint:
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout 5m ./internal/...
