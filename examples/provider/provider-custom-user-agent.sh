@@ -1,0 +1,1 @@
+export PINGONE_AIC_TF_APPEND_USER_AGENT="Jenkins/2.426.2"

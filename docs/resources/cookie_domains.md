@@ -13,7 +13,7 @@ Resource to create and manage the cookie domains.
 
 ```terraform
 resource "identitycloud_cookie_domains" "example" {
-  domains = ["mydomain1", "mydomain2"]
+  domains = ["auth.bxretail.org", "sso.bxretail.org"]
 }
 ```
 
