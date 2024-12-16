@@ -9,14 +9,14 @@ description: |-
 
 Resource to create and manage the custom domains.
 
-Any custom domains will be validated by AIC when set. CNAME record verification can also be deactivated by submitting a ticket. See [the documentation on custom domains](https://backstage.forgerock.com/docs/idcloud/latest/realms/custom-domains.html) for more information.
+Any custom domains will be validated by AIC when set. CNAME record verification can also be deactivated by submitting a ticket. See [the documentation on custom domains](https://docs.pingidentity.com/pingoneaic/latest/realms/custom-domains.html) for more information.
 
 ## Example Usage
 
 ```terraform
 resource "identitycloud_custom_domains" "example" {
   realm   = "alpha"
-  domains = ["mydomain.example.com", "mydomain2.example.com"]
+  domains = ["auth.bxretail.org", "sso.bxretail.org"]
 }
 ```
 

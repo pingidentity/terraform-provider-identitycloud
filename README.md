@@ -6,18 +6,20 @@ The PingOne Advanced Identity Cloud Terraform provider is under active developme
 
 ## Getting Started
 
-Provider documentation can be found on the [Terraform registry](https://registry.terraform.io/providers/pingidentity/identitycloud/latest), and at [terraform.pingidentity.com](https://terraform.pingidentity.com).
+Provider documentation can be found on the [Terraform registry](https://registry.terraform.io/providers/pingidentity/identitycloud/latest) and at [terraform.pingidentity.com](https://terraform.pingidentity.com).
 
 ## Requirements
 * Terraform 1.4+
 * Go 1.22.3+ (for local development builds)
 
 ## Useful Links
+* [Terraform at Ping Identity documentation](https://terraform.pingidentity.com)
 * [Discuss the PingOne Advanced Identity Cloud Terraform Provider](https://support.pingidentity.com/s/topic/0TO1W000000IF30WAG/pingdevops)
 * [Ping Identity Home](https://www.pingidentity.com/en.html)
 
 Extended documentation can be found at:
 * [PingOne Advanced Identity Cloud documentation](https://docs.pingidentity.com/pingoneaic/latest/)
+* [PingOne Advanced Identity Cloud API documentation](https://apidocs.id.forgerock.io/#section/Introduction)
 * [Ping Identity Developer Portal](https://developer.pingidentity.com/en.html)
 
 # Contributing

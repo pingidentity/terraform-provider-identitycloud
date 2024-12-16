@@ -14,8 +14,8 @@ Resource to create and manage a certificate.
 
 ```terraform
 resource "identitycloud_certificate" "example" {
-  certificate = file("mycert.pem")
-  private_key = file("mykey.pem")
+  certificate = file("/path/to/mycert.pem")
+  private_key = file("/path/to/mykey.pem")
 }
 ```
 

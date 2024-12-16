@@ -1,2 +1,1 @@
-data "identitycloud_promotion_lock" "example" {
-}
+data "identitycloud_promotion_lock" "example" {}

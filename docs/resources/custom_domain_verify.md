@@ -9,13 +9,13 @@ description: |-
 
 Resource to verify a custom domain.
 
-Any custom domains will be validated by AIC when set. CNAME record verification can also be deactivated by submitting a ticket. See [the documentation on custom domains](https://backstage.forgerock.com/docs/idcloud/latest/realms/custom-domains.html) for more information.
+Any custom domains will be validated by AIC when set. CNAME record verification can also be deactivated by submitting a ticket. See [the documentation on custom domains](https://docs.pingidentity.com/pingoneaic/latest/realms/custom-domains.html) for more information.
 
 ## Example Usage
 
 ```terraform
 resource "identitycloud_custom_domain_verify" "example" {
-  name = "mydomain.example.com"
+  name = "auth.bxretail.org"
   timeouts = {
     create = "30m"
   }
