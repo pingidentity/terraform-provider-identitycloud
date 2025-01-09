@@ -1,5 +1,5 @@
 resource "identitycloud_custom_domain_verify" "example" {
-  name = "mydomain.example.com"
+  name = "auth.bxretail.org"
   timeouts = {
     create = "30m"
   }
