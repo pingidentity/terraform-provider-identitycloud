@@ -28,7 +28,7 @@ testaccpromotion:
 testaccfolder:
 	TF_ACC=1 go test ./internal/resource/${ACC_TEST_FOLDER}... -timeout 10m -v -count=1
 
-devchecknotest: install golangcilint generate tfproviderlint tflint terrafmtlint importfmtlint
+devchecknotest: install golangcilint generate tfproviderlint tflint terrafmtlint importfmtlint providerschemalint
 
 devcheck: devchecknotest testacc
 
@@ -54,3 +54,6 @@ terrafmtlint:
 
 importfmtlint:
 	go run github.com/pavius/impi/cmd/impi --local . --scheme stdThirdPartyLocal ./internal/...
+
+providerschemalint:
+	python3 ./scripts/schemaLint.py
