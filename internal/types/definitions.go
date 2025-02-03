@@ -1,3 +1,5 @@
+// Copyright © 2025 Ping Identity Corporation
+
 package types
 
 import client "github.com/pingidentity/identitycloud-go-client/identitycloud"
