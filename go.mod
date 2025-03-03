@@ -3,7 +3,7 @@ module github.com/pingidentity/terraform-provider-identitycloud
 go 1.23.5
 
 require (
-	github.com/bflad/tfproviderlint v0.30.0
+	github.com/bflad/tfproviderlint v0.31.0
 	github.com/golangci/golangci-lint v1.64.5
 	github.com/hashicorp/terraform-plugin-docs v0.21.0
 	github.com/hashicorp/terraform-plugin-framework v1.14.1
