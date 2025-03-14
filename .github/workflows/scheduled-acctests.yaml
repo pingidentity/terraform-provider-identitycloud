@@ -15,7 +15,7 @@ jobs:
           - "1.4.*"
           - "1.10.*"
       max-parallel: 1
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -42,7 +42,7 @@ jobs:
         terraform:
           - "1.10.*"
       max-parallel: 1
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
